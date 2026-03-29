@@ -1,4 +1,4 @@
-name: Build
+name: Build & Release
 
 on:
   push:
@@ -6,15 +6,24 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             platform: win
+            artifact: "release/*.exe"
           - os: macos-latest
             platform: mac
+            artifact: "release/*.dmg"
+          - os: ubuntu-latest
+            platform: linux
+            artifact: "release/*.AppImage"
 
     runs-on: ${{ matrix.os }}
     name: Build (${{ matrix.platform }})
@@ -31,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download binaries
+      - name: Download sidecar binaries
         run: npx ts-node scripts/download-binaries.ts ${{ matrix.platform }}
 
       - name: Build & Package (Windows)
@@ -47,18 +56,44 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload installer (Windows)
-        if: matrix.platform == 'win'
+      - name: Build & Package (Linux)
+        if: matrix.platform == 'linux'
+        run: npm run package:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: luano-win
-          path: release/*.exe
+          name: luano-${{ matrix.platform }}
+          path: ${{ matrix.artifact }}
           retention-days: 7
 
-      - name: Upload installer (Mac)
-        if: matrix.platform == 'mac'
-        uses: actions/upload-artifact@v4
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    name: Create Release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: luano-mac
-          path: release/*.dmg
-          retention-days: 7
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | head -20
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          generate_release_notes: true
+          files: |
+            artifacts/luano-win/*.exe
+            artifacts/luano-mac/*.dmg
+            artifacts/luano-linux/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
