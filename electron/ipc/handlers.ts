@@ -1,6 +1,6 @@
 import { ipcMain, dialog, app, WebContents } from "electron"
 import { join } from "path"
-import { copyFileSync, mkdirSync, existsSync, readdirSync, readFileSync } from "fs"
+import { copyFileSync, mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync } from "fs"
 import { is } from "@electron-toolkit/utils"
 import * as pty from "node-pty"
 import { rojoManager, lspManager } from "../main"
@@ -9,7 +9,7 @@ import { watchProject } from "../file/watcher"
 import { lintFile } from "../sidecar/selene"
 import { formatFile } from "../sidecar/stylua"
 import {
-  chat, chatStream, inlineEdit, agentChat, planChat,
+  chat, chatStream, inlineEdit, agentChat, planChat, abortAgent,
   setApiKey, getApiKey,
   setOpenAIKey, getOpenAIKey,
   setProvider, setModel, getProviderAndModel,
@@ -141,14 +141,6 @@ export function registerIpcHandlers(): void {
   })
 
   // ── AI 키 관리 ────────────────────────────────────────────────────────────
-  ipcMain.handle("ai:set-key", (_, key: string) => {
-    setApiKey(key)
-    return { success: true }
-  })
-  ipcMain.handle("ai:get-key", () => {
-    const key = getApiKey()
-    return key ? "***set***" : null
-  })
   ipcMain.handle("ai:setKey", (_, key: string) => {
     setApiKey(key)
     return { success: true }
@@ -201,6 +193,7 @@ export function registerIpcHandlers(): void {
         globalSummary: string
         currentFile?: string
         currentFileContent?: string
+        attachedFiles?: Array<{ path: string; content: string }>
       }
 
       // RAG: 마지막 유저 메시지로 문서 검색
@@ -212,7 +205,8 @@ export function registerIpcHandlers(): void {
         globalSummary: ctx.globalSummary ?? "",
         currentFile: ctx.currentFile,
         currentFileContent: ctx.currentFileContent,
-        docsContext: docsContext || undefined
+        docsContext: docsContext || undefined,
+        attachedFiles: ctx.attachedFiles
       })
 
       await chatStream(messages as never, systemPrompt, streamChannel)
@@ -258,6 +252,9 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  // ── Agent Abort ────────────────────────────────────────────────────────────
+  ipcMain.on("ai:abort", () => { abortAgent() })
+
   // ── Agent Chat (Tool Use) ─────────────────────────────────────────────────
   ipcMain.handle(
     "ai:agent-chat",
@@ -266,6 +263,7 @@ export function registerIpcHandlers(): void {
         globalSummary: string
         currentFile?: string
         currentFileContent?: string
+        attachedFiles?: Array<{ path: string; content: string }>
       }
 
       const msgList = messages as Array<{ role: string; content: string }>
@@ -298,7 +296,8 @@ export function registerIpcHandlers(): void {
         currentFile: ctx.currentFile,
         currentFileContent: ctx.currentFileContent,
         docsContext: docsContext || undefined,
-        bridgeContext
+        bridgeContext,
+        attachedFiles: ctx.attachedFiles
       })
 
       const result = await agentChat(messages as never, systemPrompt, streamChannel)
@@ -453,6 +452,24 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle("datastore:generate-migration", (_, oldSchema: DataStoreSchema, newSchema: DataStoreSchema) => {
     return generateMigration(oldSchema, newSchema)
+  })
+
+  // ── Custom Skills (.luano/skills.json) ─────────────────────────────────
+  ipcMain.handle("skills:load", (_, projectPath: string) => {
+    const skillsPath = join(projectPath, ".luano", "skills.json")
+    if (!existsSync(skillsPath)) return []
+    try {
+      return JSON.parse(readFileSync(skillsPath, "utf-8"))
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle("skills:save", (_, projectPath: string, skills: unknown[]) => {
+    const dir = join(projectPath, ".luano")
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, "skills.json"), JSON.stringify(skills, null, 2), "utf-8")
+    return { success: true }
   })
 
   // ── Error Explainer ───────────────────────────────────────────────────────

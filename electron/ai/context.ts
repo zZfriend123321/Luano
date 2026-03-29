@@ -10,6 +10,7 @@ export interface ProjectContext {
   diagnostics?: string
   docsContext?: string // RAG 결과 (Phase 2)
   bridgeContext?: string // Live Studio bridge state (Phase 4)
+  attachedFiles?: Array<{ path: string; content: string }> // 사용자 첨부 파일
 }
 
 // 모듈 export 시그니처 추출 (정규식 기반)
@@ -105,19 +106,37 @@ async function scanModules(projectPath: string): Promise<string> {
   return modules.slice(0, 30).join("\n")
 }
 
+// 프로젝트 루트의 LUANO.md 읽기 (사용자 지시사항)
+function readLuanoMd(projectPath: string): string {
+  const mdPath = join(projectPath, "LUANO.md")
+  if (!existsSync(mdPath)) return ""
+  try {
+    const content = readFileSync(mdPath, "utf-8").trim()
+    return content.slice(0, 4000) // 토큰 제한
+  } catch {
+    return ""
+  }
+}
+
 export async function buildGlobalSummary(projectPath: string): Promise<string> {
   const structure = parseRojoProject(projectPath)
   const modules = await scanModules(projectPath)
+  const luanoMd = readLuanoMd(projectPath)
 
   const structureLines = Object.entries(structure)
     .map(([path, robloxPath]) => `  ${path} → ${robloxPath}`)
     .join("\n")
 
+  const luanoSection = luanoMd
+    ? `\nPROJECT INSTRUCTIONS (LUANO.md):\n${luanoMd}\n`
+    : ""
+
   return `PROJECT: ${projectPath.split(/[/\\]/).pop()} (Rojo)
+PROJECT PATH: ${projectPath}
 STRUCTURE:
 ${structureLines || "  (default.project.json not found)"}
 MODULES:
-${modules || "  (no modules found)"}`
+${modules || "  (no modules found)"}${luanoSection}`
 }
 
 // RAG: 유저 메시지에서 키워드 추출해 문서 검색
@@ -135,7 +154,30 @@ export function buildSystemPrompt(context: ProjectContext): string {
     ? `\nSTUDIO LIVE BRIDGE:\n${context.bridgeContext}\n`
     : ""
 
-  return `You are Luano, an expert-level Roblox game development AI. You have deep knowledge of Luau, the Roblox engine, and production game architecture patterns.
+  const attachedSection = context.attachedFiles?.length
+    ? `\nATTACHED FILES:\n${context.attachedFiles.map((f) => `--- ${f.path} ---\n\`\`\`luau\n${f.content}\n\`\`\``).join("\n\n")}\n`
+    : ""
+
+  return `You are Luano, an expert-level Roblox game development AI agent. You have deep knowledge of Luau, the Roblox engine, and production game architecture patterns.
+
+CRITICAL RULES — YOU ARE AN AGENT:
+- DO NOT describe what you will do. DO NOT explain your plan. DO NOT ask for permission. Just DO IT immediately using tools.
+- When the user asks you to create, modify, or fix code, you MUST respond with tool calls (create_file, edit_file, read_file). NEVER just output text describing code — use the tools.
+- All file paths MUST be absolute. Combine PROJECT PATH + relative path. Example: if PROJECT PATH is "C:/Users/me/game", then "src/server/MyScript.server.lua" becomes "C:/Users/me/game/src/server/MyScript.server.lua".
+- Be proactive: read related files first if needed. Create all files a feature requires.
+- Your FIRST action for any code request must be a tool call, not text. Act first, explain briefly after.
+
+ROJO FILE MAPPING:
+The STRUCTURE section shows "local_path → RobloxService" mappings from default.project.json.
+This means files inside that local folder appear DIRECTLY inside that Roblox service — the folder itself does NOT become a child.
+Example: if "src/server → ServerScriptService", then src/server/Foo.server.lua becomes ServerScriptService.Foo (NOT ServerScriptService.server.Foo).
+File naming: .server.lua = Script, .client.lua = LocalScript, .lua = ModuleScript.
+
+RESPONSE STYLE:
+- Be extremely concise. After using tools, reply in 1-2 sentences max.
+- Do NOT show the code you wrote in chat — the user can see it in the editor.
+- Do NOT repeat yourself or list what you're about to do before doing it. Just do it, then briefly say what you did.
+- Do NOT explain obvious things. Only explain non-obvious design decisions.
 
 CODE STYLE:
 - --!strict mode for all new files
@@ -213,5 +255,5 @@ ${context.globalSummary}
 CURRENT FILE: ${context.currentFile ?? "none"}
 ${context.currentFileContent ? `\`\`\`luau\n${context.currentFileContent}\n\`\`\`` : ""}
 
-${context.diagnostics ? `CURRENT DIAGNOSTICS:\n${context.diagnostics}` : ""}${docsSection}${bridgeSection}`
+${context.diagnostics ? `CURRENT DIAGNOSTICS:\n${context.diagnostics}` : ""}${docsSection}${bridgeSection}${attachedSection}`
 }

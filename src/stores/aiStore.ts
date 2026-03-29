@@ -1,7 +1,5 @@
 import { create } from "zustand"
 
-export type AIMode = "ask" | "plan" | "agent"
-
 export interface ChatMessage {
   id: string
   role: "user" | "assistant"
@@ -13,7 +11,7 @@ interface AIStore {
   messages: ChatMessage[]
   isStreaming: boolean
   globalSummary: string
-  mode: AIMode
+  planMode: boolean
   autoAccept: boolean
 
   addMessage: (msg: Omit<ChatMessage, "id">) => string
@@ -21,7 +19,7 @@ interface AIStore {
   setStreaming: (v: boolean) => void
   setGlobalSummary: (s: string) => void
   clearMessages: () => void
-  setMode: (m: AIMode) => void
+  setPlanMode: (v: boolean) => void
   setAutoAccept: (v: boolean) => void
 }
 
@@ -29,7 +27,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
   messages: [],
   isStreaming: false,
   globalSummary: "",
-  mode: "agent",
+  planMode: false,
   autoAccept: false,
 
   addMessage: (msg) => {
@@ -48,6 +46,6 @@ export const useAIStore = create<AIStore>((set, get) => ({
   setStreaming: (v) => set({ isStreaming: v }),
   setGlobalSummary: (s) => set({ globalSummary: s }),
   clearMessages: () => set({ messages: [] }),
-  setMode: (m) => set({ mode: m }),
+  setPlanMode: (v) => set({ planMode: v }),
   setAutoAccept: (v) => set({ autoAccept: v })
 }))

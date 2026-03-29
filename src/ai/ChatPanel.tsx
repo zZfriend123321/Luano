@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react"
-import { useAIStore, ChatMessage, AIMode } from "../stores/aiStore"
+import { useAIStore, ChatMessage } from "../stores/aiStore"
 import { useProjectStore } from "../stores/projectStore"
 import { CodeBlock } from "./CodeBlock"
 import { useT } from "../i18n/useT"
 import { useIpcEvent } from "../hooks/useIpc"
+import { BUILT_IN_SKILLS, mergeSkills, findSkills, expandSkill, Skill } from "./skills"
 
 interface ToolEvent {
   tool: string
@@ -22,6 +23,7 @@ interface ToolCallMessage {
   tool: string
   success: boolean
   output: string
+  ts: number
 }
 
 type DisplayMessage = ChatMessage | ToolCallMessage
@@ -58,112 +60,54 @@ function IconLightning(): JSX.Element {
   )
 }
 
-// ── Plan Card ─────────────────────────────────────────────────────────────────
-
-interface PlanCardProps {
-  steps: string[]
-  isExecuting: boolean
-  onConfirm: () => void
-  onCancel: () => void
+function IconStop(): JSX.Element {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+    </svg>
+  )
 }
 
-function PlanCard({ steps, isExecuting, onConfirm, onCancel }: PlanCardProps): JSX.Element {
-  const t = useT()
+function IconPlan(): JSX.Element {
   return (
-    <div
-      className="rounded-xl overflow-hidden animate-slide-up"
-      style={{ border: "1px solid rgba(37,99,235,0.35)", background: "rgba(37,99,235,0.06)" }}
-    >
-      {/* Header */}
-      <div
-        className="flex items-center gap-2 px-3 py-2"
-        style={{ borderBottom: "1px solid rgba(37,99,235,0.2)" }}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-        <span style={{ fontSize: "11px", fontWeight: 600, color: "#60a5fa" }}>
-          {t("planTitle")}
-        </span>
-      </div>
-
-      {/* Steps */}
-      <div className="px-3 py-2.5 flex flex-col gap-2">
-        {steps.map((step, i) => (
-          <div key={i} className="flex items-start gap-2.5">
-            <span
-              className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ background: "rgba(37,99,235,0.2)", color: "#60a5fa", fontSize: "9px", fontWeight: 700, marginTop: 1 }}
-            >
-              {i + 1}
-            </span>
-            <span style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.55" }}>
-              {step.replace(/^Step\s+\d+:\s*/i, "")}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div
-        className="flex items-center gap-2 px-3 py-2"
-        style={{ borderTop: "1px solid rgba(37,99,235,0.2)" }}
-      >
-        <button
-          onClick={onConfirm}
-          disabled={isExecuting}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ background: "var(--accent)", color: "white" }}
-          onMouseEnter={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)" }}
-          onMouseLeave={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
-        >
-          {isExecuting ? (
-            <span className="text-shimmer">{t("sending")}</span>
-          ) : (
-            <>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-              {t("planConfirm")}
-            </>
-          )}
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={isExecuting}
-          className="px-3 py-1 rounded-md text-xs transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ background: "var(--bg-elevated)", color: "var(--text-muted)", border: "1px solid var(--border)" }}
-          onMouseEnter={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = "var(--bg-surface)" }}
-          onMouseLeave={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)" }}
-        >
-          {t("planCancel")}
-        </button>
-      </div>
-    </div>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
   )
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-const MODES: AIMode[] = ["ask", "plan", "agent"]
-const MODE_KEYS: Record<AIMode, "askMode" | "planMode" | "agentMode"> = {
-  ask: "askMode",
-  plan: "planMode",
-  agent: "agentMode"
+interface AttachedFile {
+  path: string
+  name: string
+  content: string
 }
 
 export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
-  const { messages, isStreaming, addMessage, updateMessage, setStreaming, globalSummary, mode, autoAccept, setMode, setAutoAccept } = useAIStore()
+  const { messages, isStreaming, addMessage, updateMessage, setStreaming, globalSummary, planMode, autoAccept, setPlanMode, setAutoAccept } = useAIStore()
   const { projectPath, activeFile, fileContents } = useProjectStore()
   const [input, setInput] = useState("")
   const [toolMessages, setToolMessages] = useState<ToolCallMessage[]>([])
   const [bridgeConnected, setBridgeConnected] = useState(false)
-  const [planSteps, setPlanSteps] = useState<string[] | null>(null)
-  const [planLoading, setPlanLoading] = useState(false)
-  const [pendingPlanMessages, setPendingPlanMessages] = useState<Array<{role: string; content: string}>>([])
+  const [allSkills, setAllSkills] = useState<Skill[]>(BUILT_IN_SKILLS)
+  const [skillMatches, setSkillMatches] = useState<Skill[]>([])
+  const [skillIndex, setSkillIndex] = useState(0)
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
+  const [agentRound, setAgentRound] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const t = useT()
+
+  // Load custom skills from project
+  useEffect(() => {
+    if (!projectPath || typeof window.api.skillsLoad !== "function") return
+    window.api.skillsLoad(projectPath).then((raw) => {
+      const custom = (raw ?? []) as Skill[]
+      setAllSkills(mergeSkills(custom))
+    }).catch(() => {})
+  }, [projectPath])
 
   useEffect(() => {
     window.api.bridgeIsConnected().then(setBridgeConnected)
@@ -175,19 +119,57 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, toolMessages, planSteps, planLoading])
+  }, [messages, toolMessages])
 
   const displayMessages: DisplayMessage[] = [...messages, ...toolMessages].sort((a, b) => {
-    const aId = Number(a.id.replace(/\D/g, "").slice(0, 13))
-    const bId = Number(b.id.replace(/\D/g, "").slice(0, 13))
-    return aId - bId
+    const aTs = "ts" in a ? a.ts : Number(a.id.split("-")[0]) || 0
+    const bTs = "ts" in b ? b.ts : Number(b.id.split("-")[0]) || 0
+    return aTs - bTs
   })
 
   const buildContext = () => ({
     globalSummary,
     currentFile: activeFile ?? undefined,
-    currentFileContent: activeFile ? fileContents[activeFile] : undefined
+    currentFileContent: activeFile ? fileContents[activeFile] : undefined,
+    attachedFiles: attachedFiles.length > 0
+      ? attachedFiles.map((f) => ({ path: f.path, content: f.content }))
+      : undefined
   })
+
+  // Skills autocomplete
+  useEffect(() => {
+    const trimmed = input.trim()
+    if (trimmed.startsWith("/") && !trimmed.includes(" ")) {
+      const matches = findSkills(trimmed, allSkills)
+      setSkillMatches(matches)
+      setSkillIndex(0)
+    } else {
+      setSkillMatches([])
+    }
+  }, [input, allSkills])
+
+  const selectSkill = (skill: Skill) => {
+    const selection = activeFile ? (fileContents[activeFile] ?? "") : ""
+    const expanded = expandSkill(skill, selection, activeFile ?? "")
+    setInput(expanded)
+    setSkillMatches([])
+    textareaRef.current?.focus()
+  }
+
+  const attachCurrentFile = () => {
+    if (!activeFile || !fileContents[activeFile]) return
+    if (attachedFiles.some((f) => f.path === activeFile)) return
+    const name = activeFile.split(/[/\\]/).pop() ?? activeFile
+    setAttachedFiles((prev) => [...prev, {
+      path: activeFile,
+      name,
+      content: fileContents[activeFile]
+    }])
+  }
+
+  const removeAttachment = (path: string) => {
+    setAttachedFiles((prev) => prev.filter((f) => f.path !== path))
+  }
 
   const buildApiMessages = (userMsg: string) => {
     const history = messages
@@ -197,11 +179,17 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
     return history
   }
 
-  // ── Execute agent with pre-built messages ────────────────────────────────
+  const handleAbort = useCallback(() => {
+    window.api.aiAbort()
+    setAgentRound(0)
+  }, [])
+
+  // ── Agent mode: AI reads/writes files directly ──────────────────────────
   const executeAgent = useCallback(
     async (apiMessages: Array<{role: string; content: string}>) => {
       const assistantId = addMessage({ role: "assistant", content: "", streaming: true })
       setStreaming(true)
+      setAgentRound(0)
       try {
         let accumulated = ""
         const result = await window.api.aiAgentChat(
@@ -213,35 +201,41 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             updateMessage(assistantId, accumulated, true)
           },
           (event: ToolEvent) => {
+            const now = Date.now()
             setToolMessages((prev) => [
-              ...prev,
+              ...prev.slice(-99),
               {
-                id: `tool-${Date.now()}-${Math.random()}`,
+                id: `tool-${now}-${Math.random()}`,
                 type: "tool",
                 tool: event.tool,
                 success: event.success,
-                output: event.output.slice(0, 200)
+                output: event.output.slice(0, 200),
+                ts: now
               }
             ])
+          },
+          (roundInfo) => {
+            setAgentRound(roundInfo.round)
           }
         )
         updateMessage(assistantId, accumulated, false)
         if (result.modifiedFiles.length > 0) {
           const names = result.modifiedFiles.map((f) => f.split(/[/\\]/).pop()).join(", ")
-          updateMessage(assistantId, `${accumulated}\n\n✅ Modified: ${names}`, false)
+          updateMessage(assistantId, `${accumulated}\n\n Modified: ${names}`, false)
         }
       } catch (err) {
         updateMessage(assistantId, `Error: ${String(err)}`, false)
       } finally {
         setStreaming(false)
+        setAgentRound(0)
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [messages, activeFile, fileContents, globalSummary]
   )
 
-  // ── Ask mode (chat, no tools) ────────────────────────────────────────────
-  const doSendAsk = useCallback(
+  // ── Plan mode: chat only, no file modifications ─────────────────────────
+  const doSendChat = useCallback(
     async (apiMessages: Array<{role: string; content: string}>) => {
       const assistantId = addMessage({ role: "assistant", content: "", streaming: true })
       setStreaming(true)
@@ -267,59 +261,44 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
     [messages, activeFile, fileContents, globalSummary]
   )
 
-  // ── Plan mode ────────────────────────────────────────────────────────────
-  const doSendPlan = useCallback(
-    async (apiMessages: Array<{role: string; content: string}>) => {
-      setPlanLoading(true)
-      try {
-        const steps = await window.api.aiPlanChat(apiMessages, buildContext())
-        setPlanSteps(steps)
-        setPendingPlanMessages(apiMessages)
-      } catch (err) {
-        addMessage({ role: "assistant", content: `Error: ${String(err)}` })
-      } finally {
-        setPlanLoading(false)
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [messages, activeFile, fileContents, globalSummary]
-  )
-
-  const confirmPlan = async () => {
-    const savedMessages = pendingPlanMessages
-    setPlanSteps(null)
-    setPendingPlanMessages([])
-    await executeAgent(savedMessages)
-  }
-
-  const cancelPlan = () => {
-    setPlanSteps(null)
-    setPendingPlanMessages([])
-  }
-
   // ── Send dispatch ────────────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
-    if (!input.trim() || isStreaming || planLoading) return
+    if (!input.trim() || isStreaming) return
     const userMsg = input.trim()
     setInput("")
+    setAttachedFiles([])
     addMessage({ role: "user", content: userMsg })
     const apiMessages = buildApiMessages(userMsg)
 
-    if (mode === "ask") {
-      await doSendAsk(apiMessages)
-    } else if (mode === "plan") {
-      await doSendPlan(apiMessages)
+    if (planMode) {
+      await doSendChat(apiMessages)
     } else {
       await executeAgent(apiMessages)
     }
-  }, [input, isStreaming, planLoading, mode, addMessage, doSendAsk, doSendPlan, executeAgent])
+  }, [input, isStreaming, planMode, addMessage, doSendChat, executeAgent])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Tab" && e.shiftKey) {
-      e.preventDefault()
-      const idx = MODES.indexOf(mode)
-      setMode(MODES[(idx + 1) % MODES.length])
-      return
+    // Skills autocomplete navigation
+    if (skillMatches.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setSkillIndex((i) => Math.min(i + 1, skillMatches.length - 1))
+        return
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setSkillIndex((i) => Math.max(i - 1, 0))
+        return
+      }
+      if (e.key === "Tab" || e.key === "Enter") {
+        e.preventDefault()
+        selectSkill(skillMatches[skillIndex])
+        return
+      }
+      if (e.key === "Escape") {
+        setSkillMatches([])
+        return
+      }
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -334,7 +313,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
     ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`
   }, [input])
 
-  const blocked = isStreaming || planLoading || planSteps !== null
+  const blocked = isStreaming
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "var(--bg-base)" }}>
@@ -343,30 +322,9 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
         className="flex items-center gap-2 px-3 py-2 flex-shrink-0"
         style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--bg-panel)" }}
       >
-        {/* Mode pills */}
-        <div
-          className="flex items-center rounded-md p-0.5 gap-0.5"
-          style={{ background: "var(--bg-elevated)" }}
-        >
-          {MODES.map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              title={`${t(MODE_KEYS[m])} mode (Shift+Tab to cycle)`}
-              className="px-2 py-0.5 rounded transition-all duration-100"
-              style={{
-                fontSize: "10px",
-                fontWeight: mode === m ? 600 : 400,
-                color: mode === m ? "var(--text-primary)" : "var(--text-muted)",
-                background: mode === m ? "var(--bg-surface)" : "transparent",
-                minWidth: 36,
-                textAlign: "center"
-              }}
-            >
-              {t(MODE_KEYS[m])}
-            </button>
-          ))}
-        </div>
+        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
+          AI
+        </span>
 
         {/* Bridge badge */}
         {bridgeConnected && (
@@ -382,10 +340,43 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
         <div className="flex-1" />
 
+        {/* Agent round indicator */}
+        {isStreaming && agentRound > 0 && (
+          <span
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded animate-fade-in"
+            style={{
+              fontSize: "10px",
+              color: "var(--accent)",
+              background: "rgba(37,99,235,0.08)",
+              border: "1px solid rgba(37,99,235,0.2)",
+              fontFamily: "monospace"
+            }}
+          >
+            <span className="animate-blink" style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
+            Round {agentRound}
+          </span>
+        )}
+
+        {/* Plan mode toggle */}
+        <button
+          onClick={() => setPlanMode(!planMode)}
+          title={`Plan mode: ${planMode ? "ON" : "OFF"} — AI plans before executing`}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all duration-100"
+          style={{
+            fontSize: "10px",
+            color: planMode ? "#60a5fa" : "var(--text-muted)",
+            background: planMode ? "rgba(96,165,250,0.12)" : "transparent",
+            border: `1px solid ${planMode ? "rgba(96,165,250,0.3)" : "var(--border-subtle)"}`
+          }}
+        >
+          <IconPlan />
+          Plan
+        </button>
+
         {/* Auto Accept toggle */}
         <button
           onClick={() => setAutoAccept(!autoAccept)}
-          title={`Auto Accept: ${autoAccept ? "ON" : "OFF"} — skips diff preview`}
+          title={`Auto Accept: ${autoAccept ? "ON" : "OFF"} — auto-apply changes`}
           className="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all duration-100"
           style={{
             fontSize: "10px",
@@ -412,25 +403,23 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
-        {messages.length === 0 && !planLoading && !planSteps && (
+        {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 py-12 animate-fade-in">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
                 <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z" />
                 <path d="M12 16v-4M12 8h.01" />
               </svg>
             </div>
             <div className="text-center">
               <p className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
-                {mode === "ask" && "Ask anything about Luau / Roblox"}
-                {mode === "plan" && "Describe what to build — AI will plan first"}
-                {mode === "agent" && "Request edits — AI writes files directly"}
+                Ask anything or request code edits
               </p>
               <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)" }}>
-                Shift+Tab to cycle modes
+                Type <span style={{ color: "var(--accent)", fontFamily: "monospace" }}>/</span> for skills
               </p>
             </div>
           </div>
@@ -443,32 +432,12 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
           )
         )}
 
-        {/* Plan loading */}
-        {planLoading && (
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg animate-fade-in"
-            style={{ background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.2)" }}
-          >
-            <span className="text-shimmer" style={{ fontSize: "11px" }}>{t("planThinking")}</span>
-          </div>
-        )}
-
-        {/* Plan card */}
-        {planSteps && (
-          <PlanCard
-            steps={planSteps}
-            isExecuting={isStreaming}
-            onConfirm={confirmPlan}
-            onCancel={cancelPlan}
-          />
-        )}
-
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
       <div
-        className="px-3 pt-2 pb-3 flex-shrink-0"
+        className="px-3 pt-2 pb-3 flex-shrink-0 relative"
         style={{ borderTop: "1px solid var(--border-subtle)" }}
       >
         {!projectPath && (
@@ -479,6 +448,76 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             {t("openProject")}
           </div>
         )}
+
+        {/* Skills autocomplete dropdown */}
+        {skillMatches.length > 0 && (
+          <div
+            className="absolute left-3 right-3 rounded-lg overflow-hidden animate-fade-in"
+            style={{
+              bottom: "100%",
+              marginBottom: 4,
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border-strong)",
+              boxShadow: "0 -8px 24px rgba(0,0,0,0.4)",
+              zIndex: 10,
+              maxHeight: 200,
+              overflowY: "auto"
+            }}
+          >
+            {skillMatches.map((skill, i) => (
+              <button
+                key={skill.command}
+                onClick={() => selectSkill(skill)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors duration-75"
+                style={{
+                  background: i === skillIndex ? "var(--bg-surface)" : "transparent",
+                  borderBottom: i < skillMatches.length - 1 ? "1px solid var(--border-subtle)" : "none"
+                }}
+              >
+                <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--accent)", fontFamily: "monospace", minWidth: 70 }}>
+                  {skill.command}
+                </span>
+                <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                  {skill.description}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Attached files chips */}
+        {attachedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {attachedFiles.map((f) => (
+              <span
+                key={f.path}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-md"
+                style={{
+                  fontSize: "10px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-secondary)"
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                  <polyline points="13 2 13 9 20 9" />
+                </svg>
+                {f.name}
+                <button
+                  onClick={() => removeAttachment(f.path)}
+                  className="ml-0.5 rounded-sm transition-colors duration-75"
+                  style={{ color: "var(--text-muted)" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--text-primary)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"}
+                >
+                  x
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div
           className="rounded-lg overflow-hidden transition-all duration-150"
           style={{ border: "1px solid var(--border)" }}
@@ -491,11 +530,9 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              mode === "ask"
-                ? "Ask anything about Luau development..."
-                : mode === "plan"
-                ? "Describe what to build — AI will plan steps first..."
-                : "Request file edits... (agent writes directly)"
+              planMode
+                ? "Describe what to build \u2014 AI analyzes without modifying..."
+                : "Ask anything or request code edits... (type / for skills)"
             }
             rows={2}
             disabled={blocked || !projectPath}
@@ -513,31 +550,60 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             className="flex items-center justify-between px-2 py-1.5"
             style={{ background: "var(--bg-elevated)", borderTop: "1px solid var(--border-subtle)" }}
           >
-            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-              ↵ {mode === "plan" ? "plan" : "send"} · Shift+Tab: cycle mode
-            </span>
-            <button
-              onClick={sendMessage}
-              disabled={blocked || !input.trim() || !projectPath}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{
-                background: blocked ? "var(--bg-surface)" : "var(--accent)",
-                color: "white",
-                fontSize: "11px",
-                fontWeight: 500
-              }}
-              onMouseEnter={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)" }}
-              onMouseLeave={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = blocked ? "var(--bg-surface)" : "var(--accent)" }}
-            >
-              {blocked ? (
-                <span className="text-shimmer">{planLoading ? t("planThinking") : t("sending")}</span>
-              ) : (
-                <>
-                  <IconSend />
-                  {t(mode === "plan" ? "planMode" : "send")}
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                {"\u21B5"} send {planMode && " (read-only)"}
+              </span>
+              {/* Attach file button */}
+              <button
+                onClick={attachCurrentFile}
+                disabled={!activeFile || !projectPath}
+                title={activeFile ? `Attach ${activeFile.split(/[/\\]/).pop()}` : "Open a file first"}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all duration-100 disabled:opacity-30"
+                style={{ fontSize: "10px", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}
+                onMouseEnter={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)" }}
+                onMouseLeave={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)" }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                Attach
+              </button>
+            </div>
+            {blocked ? (
+              <button
+                onClick={handleAbort}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all duration-150"
+                style={{
+                  background: "#ef4444",
+                  color: "white",
+                  fontSize: "11px",
+                  fontWeight: 500
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#dc2626"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "#ef4444"}
+              >
+                <IconStop />
+                Stop
+              </button>
+            ) : (
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || !projectPath}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{
+                  background: "var(--accent)",
+                  color: "white",
+                  fontSize: "11px",
+                  fontWeight: 500
+                }}
+                onMouseEnter={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)" }}
+                onMouseLeave={e => { if (!(e.currentTarget as HTMLButtonElement).disabled) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              >
+                <IconSend />
+                {t("send")}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -623,7 +689,7 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
               >
                 {seg.content}
                 {i === segments.length - 1 && message.streaming && (
-                  <span className="animate-blink" style={{ color: "var(--accent)" }}>▌</span>
+                  <span className="animate-blink" style={{ color: "var(--accent)" }}>{"\u258C"}</span>
                 )}
               </div>
             )
@@ -633,7 +699,7 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
               className="rounded-xl px-3 py-2"
               style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
             >
-              <span className="animate-blink" style={{ color: "var(--accent)" }}>▌</span>
+              <span className="animate-blink" style={{ color: "var(--accent)" }}>{"\u258C"}</span>
             </div>
           )}
         </div>
@@ -648,6 +714,9 @@ const TOOL_LABELS: Record<string, { label: string; bridge?: boolean }> = {
   read_file:            { label: "Read file" },
   edit_file:            { label: "Edit file" },
   create_file:          { label: "Create file" },
+  delete_file:          { label: "Delete file" },
+  list_files:           { label: "List files" },
+  grep_files:           { label: "Search in files" },
   search_docs:          { label: "Search docs" },
   read_instance_tree:   { label: "Read instance tree", bridge: true },
   get_runtime_logs:     { label: "Get runtime logs",   bridge: true },
@@ -684,7 +753,7 @@ function ToolCallBubble({ event }: { event: ToolCallMessage }): JSX.Element {
               fontSize: "9px"
             }}
           >
-            {event.success ? "✓" : "✗"}
+            {event.success ? "\u2713" : "\u2717"}
           </span>
           <span style={{ fontSize: "11px", color: isBridge ? "#818cf8" : "var(--text-secondary)", fontFamily: "monospace" }}>
             {meta.label}
@@ -693,7 +762,7 @@ function ToolCallBubble({ event }: { event: ToolCallMessage }): JSX.Element {
             className="ml-auto transition-transform duration-150"
             style={{ color: "var(--text-muted)", fontSize: "9px", transform: expanded ? "rotate(180deg)" : "none" }}
           >
-            ▼
+            {"\u25BC"}
           </span>
         </button>
         {expanded && (

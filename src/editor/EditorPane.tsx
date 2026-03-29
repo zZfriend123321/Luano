@@ -131,12 +131,12 @@ export function EditorPane(): JSX.Element {
 
     let alive = true
     startLuauLanguageClient(lspPort).catch((err) => {
-      console.warn("[LSP] Failed to start language client:", err)
+      if (alive) console.warn("[LSP] Failed to start language client:", err)
     })
 
     return () => {
       alive = false
-      if (!alive) stopLuauLanguageClient()
+      stopLuauLanguageClient()
     }
   }, [lspPort])
 

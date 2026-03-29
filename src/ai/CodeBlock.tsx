@@ -111,7 +111,7 @@ export function CodeBlock({ code, lang }: CodeBlockProps): JSX.Element {
           style={{
             fontSize: "12px",
             fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-            color: "#d4e2f4",
+            color: "var(--text-primary)",
             lineHeight: "1.6",
             whiteSpace: "pre",
             background: "var(--bg-base)"

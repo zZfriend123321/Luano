@@ -109,7 +109,7 @@ const panelIcons: Record<SidePanel, () => JSX.Element> = {
 export function Sidebar({ activePanel, onSelect, terminalOpen, onTerminalToggle }: SidebarProps): JSX.Element {
   const t = useT()
   const rojoStatus = useRojoStore((s) => s.status)
-  const rojoServing = rojoStatus === "serving" || rojoStatus === "starting"
+  const rojoActive = rojoStatus === "serving" || rojoStatus === "listening" || rojoStatus === "starting"
 
   const labels: Record<SidePanel, string> = {
     explorer: t("files"),
@@ -138,18 +138,18 @@ export function Sidebar({ activePanel, onSelect, terminalOpen, onTerminalToggle 
             title={labels[panel]}
             className="relative w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-150"
             style={{
-              color: isActive ? "#ffffff" : "rgba(255,255,255,0.45)",
+              color: isActive ? "var(--text-primary)" : "var(--text-muted)",
               background: isActive ? "var(--bg-elevated)" : "transparent"
             }}
             onMouseEnter={e => {
               if (!isActive) {
-                (e.currentTarget).style.color = "rgba(255,255,255,0.85)"
+                (e.currentTarget).style.color = "var(--text-secondary)"
                 ;(e.currentTarget).style.background = "var(--bg-surface)"
               }
             }}
             onMouseLeave={e => {
               if (!isActive) {
-                (e.currentTarget).style.color = "rgba(255,255,255,0.45)"
+                (e.currentTarget).style.color = "var(--text-muted)"
                 ;(e.currentTarget).style.background = "transparent"
               }
             }}
@@ -162,7 +162,7 @@ export function Sidebar({ activePanel, onSelect, terminalOpen, onTerminalToggle 
             )}
             <Icon />
             {/* Rojo active indicator */}
-            {panel === "rojo" && rojoServing && (
+            {panel === "rojo" && rojoActive && (
               <span
                 className="absolute top-1 right-1 w-2 h-2 rounded-full"
                 style={{
@@ -184,18 +184,18 @@ export function Sidebar({ activePanel, onSelect, terminalOpen, onTerminalToggle 
         title="Toggle Terminal"
         className="relative w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-150"
         style={{
-          color: terminalOpen ? "#ffffff" : "rgba(255,255,255,0.45)",
+          color: terminalOpen ? "var(--text-primary)" : "var(--text-muted)",
           background: terminalOpen ? "var(--bg-elevated)" : "transparent"
         }}
         onMouseEnter={e => {
           if (!terminalOpen) {
-            (e.currentTarget).style.color = "rgba(255,255,255,0.85)"
+            (e.currentTarget).style.color = "var(--text-secondary)"
             ;(e.currentTarget).style.background = "var(--bg-surface)"
           }
         }}
         onMouseLeave={e => {
           if (!terminalOpen) {
-            (e.currentTarget).style.color = "rgba(255,255,255,0.45)"
+            (e.currentTarget).style.color = "var(--text-muted)"
             ;(e.currentTarget).style.background = "transparent"
           }
         }}

@@ -141,8 +141,12 @@ interface Window {
         input: Record<string, unknown>
         output: string
         success: boolean
-      }) => void
+      }) => void,
+      onRound?: (info: { round: number; max: number }) => void
     ) => Promise<{ modifiedFiles: string[] }>
+
+    // Agent Abort
+    aiAbort: () => void
 
     // Studio Bridge (legacy MCP)
     studioGetConsole: () => Promise<string | null>
@@ -175,6 +179,10 @@ interface Window {
     datastoreSaveSchema: (projectPath: string, schema: unknown) => Promise<{ success: boolean }>
     datastoreDeleteSchema: (projectPath: string, name: string) => Promise<{ success: boolean }>
     datastoreGenerateCode: (schema: unknown) => Promise<string>
+
+    // Custom Skills
+    skillsLoad: (projectPath: string) => Promise<unknown[]>
+    skillsSave: (projectPath: string, skills: unknown[]) => Promise<{ success: boolean }>
 
     // Error Explainer
     explainError: (errorText: string, context: unknown) => Promise<string>

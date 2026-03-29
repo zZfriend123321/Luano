@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-type RojoStatus = "stopped" | "starting" | "serving" | "error"
+type RojoStatus = "stopped" | "starting" | "listening" | "serving" | "error"
 
 // 로그에서 포트 파싱: "Listening on port 34872" 또는 "34872" 포함 패턴
 function parsePort(log: string): number | null {

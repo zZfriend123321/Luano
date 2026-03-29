@@ -83,18 +83,26 @@ const api = {
     messages: unknown[],
     context: unknown,
     onChunk: (chunk: string | null) => void,
-    onTool: (event: ToolEvent) => void
+    onTool: (event: ToolEvent) => void,
+    onRound?: (info: { round: number; max: number }) => void
   ): Promise<{ modifiedFiles: string[] }> => {
     const channel = `ai:agent:${Date.now()}`
     ipcRenderer.on(channel, (_, chunk) => onChunk(chunk as string | null))
     ipcRenderer.on(`${channel}:tool`, (_, event) => onTool(event as ToolEvent))
+    if (onRound) {
+      ipcRenderer.on(`${channel}:round`, (_, info) => onRound(info as { round: number; max: number }))
+    }
     return ipcRenderer
       .invoke("ai:agent-chat", messages, context, channel)
       .finally(() => {
         ipcRenderer.removeAllListeners(channel)
         ipcRenderer.removeAllListeners(`${channel}:tool`)
+        ipcRenderer.removeAllListeners(`${channel}:round`)
       }) as Promise<{ modifiedFiles: string[] }>
   },
+
+  // ── Agent Abort ───────────────────────────────────────────────────────────
+  aiAbort: (): void => { ipcRenderer.send("ai:abort") },
 
   // ── Studio Bridge (legacy MCP) ────────────────────────────────────────────
   studioGetConsole: (): Promise<string | null> =>
@@ -147,6 +155,12 @@ const api = {
     ipcRenderer.invoke("datastore:generate-code", schema),
   datastoreGenerateMigration: (oldSchema: unknown, newSchema: unknown): Promise<string> =>
     ipcRenderer.invoke("datastore:generate-migration", oldSchema, newSchema),
+
+  // ── Custom Skills ──────────────────────────────────────────────────────────
+  skillsLoad: (projectPath: string): Promise<unknown[]> =>
+    ipcRenderer.invoke("skills:load", projectPath),
+  skillsSave: (projectPath: string, skills: unknown[]): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke("skills:save", projectPath, skills),
 
   // ── Error Explainer ───────────────────────────────────────────────────────
   explainError: (errorText: string, context: unknown): Promise<string> =>

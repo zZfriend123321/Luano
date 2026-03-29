@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 
+const isMac = typeof navigator !== "undefined" &&
+  (navigator.platform.toLowerCase().includes("mac") ||
+   navigator.userAgent.toLowerCase().includes("mac os"))
+const KB = isMac ? "Cmd+K" : "Ctrl+K"
+
 interface TutorialStep {
   target?: string          // data-tour="xxx" selector
   title: string
@@ -40,13 +45,13 @@ const STEPS: TutorialStep[] = [
   {
     target: "inline-edit-btn",
     title: "Inline AI Edit",
-    description: "Select code and press Ctrl+K (or click this button) to let AI edit your code directly.",
+    description: `Select code and press ${KB} (or click this button) to let AI edit your code directly.`,
     position: "bottom"
   },
   {
     target: "chat-panel",
     title: "AI Assistant",
-    description: "Ask questions, plan features, or let the Agent write code autonomously. Supports Ask, Plan, and Agent modes.",
+    description: "Chat with AI to ask questions or request code edits. Type / for skills like /explain, /fix, /optimize. Use Attach to send files, Plan mode for read-only analysis.",
     position: "left"
   },
   {

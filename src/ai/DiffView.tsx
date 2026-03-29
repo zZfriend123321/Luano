@@ -1,13 +1,43 @@
 import { DiffEditor } from "@monaco-editor/react"
 import type * as Monaco from "monaco-editor"
+import { useSettingsStore } from "../stores/settingsStore"
 
 interface DiffViewProps {
   original: string
   modified: string
 }
 
-function defineTheme(monaco: typeof Monaco): void {
-  monaco.editor.defineTheme("luano-dark", {
+function defineDiffThemes(monaco: typeof Monaco): void {
+  monaco.editor.defineTheme("luano-diff-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "comment",    foreground: "6a9955", fontStyle: "italic" },
+      { token: "keyword",    foreground: "569cd6" },
+      { token: "string",     foreground: "ce9178" },
+      { token: "number",     foreground: "b5cea8" },
+      { token: "identifier", foreground: "d4d4d4" }
+    ],
+    colors: {
+      "editor.background":                   "#1e1e1e",
+      "editor.foreground":                   "#d4d4d4",
+      "editor.lineHighlightBackground":      "#252526",
+      "editor.selectionBackground":          "#264f7840",
+      "editorCursor.foreground":             "#569cd6",
+      "editorLineNumber.foreground":         "#5a5a5a",
+      "editorLineNumber.activeForeground":   "#c6c6c6",
+      "diffEditor.insertedTextBackground":   "#4ec9b022",
+      "diffEditor.removedTextBackground":    "#f4474722",
+      "diffEditor.insertedLineBackground":   "#4ec9b012",
+      "diffEditor.removedLineBackground":    "#f4474712",
+      "diffEditorGutter.insertedLineBackground": "#4ec9b030",
+      "diffEditorGutter.removedLineBackground":  "#f4474730",
+      "scrollbarSlider.background":          "#4e4e4ea0",
+      "scrollbarSlider.hoverBackground":     "#646464a0"
+    }
+  })
+
+  monaco.editor.defineTheme("luano-diff-tokyo-night", {
     base: "vs-dark",
     inherit: true,
     rules: [
@@ -38,14 +68,17 @@ function defineTheme(monaco: typeof Monaco): void {
 }
 
 export function DiffView({ original, modified }: DiffViewProps): JSX.Element {
+  const appTheme = useSettingsStore((s) => s.theme)
+  const diffTheme = appTheme === "tokyo-night" ? "luano-diff-tokyo-night" : "luano-diff-dark"
+
   return (
     <DiffEditor
       height="100%"
       language="lua"
-      theme="luano-dark"
+      theme={diffTheme}
       original={original}
       modified={modified}
-      beforeMount={defineTheme}
+      beforeMount={defineDiffThemes}
       options={{
         readOnly: true,
         renderSideBySide: true,

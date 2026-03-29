@@ -2,11 +2,12 @@ import { useRojoStore } from "../stores/rojoStore"
 import { useProjectStore } from "../stores/projectStore"
 import { useRef, useEffect } from "react"
 
-const statusConfig = {
-  stopped: { color: "#3a5272", glow: false, label: "Stopped" },
-  starting: { color: "#f59e0b", glow: false, label: "Starting…" },
-  serving:  { color: "#10b981", glow: true,  label: "Serving" },
-  error:    { color: "#e11d48", glow: false, label: "Error" }
+const statusConfig: Record<string, { color: string; glow: boolean; label: string }> = {
+  stopped:   { color: "#3a5272", glow: false, label: "Stopped" },
+  starting:  { color: "#f59e0b", glow: false, label: "Starting…" },
+  listening: { color: "#10b981", glow: false, label: "Ready" },
+  serving:   { color: "#10b981", glow: true,  label: "Syncing" },
+  error:     { color: "#e11d48", glow: false, label: "Error" }
 }
 
 export function RojoPanel(): JSX.Element {
@@ -24,14 +25,14 @@ export function RojoPanel(): JSX.Element {
 
   const handleToggle = async () => {
     if (!projectPath) return
-    if (status === "serving" || status === "starting") {
+    if (status === "serving" || status === "listening" || status === "starting") {
       await window.api.rojoStop()
     } else {
       await window.api.rojoServe(projectPath)
     }
   }
 
-  const isActive = status === "serving" || status === "starting"
+  const isActive = status === "serving" || status === "listening" || status === "starting"
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -62,7 +63,7 @@ export function RojoPanel(): JSX.Element {
           />
           <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
             {cfg.label}
-            {status === "serving" && port && (
+            {(status === "serving" || status === "listening") && port && (
               <span style={{ color: "var(--text-muted)", marginLeft: "4px" }}>:{port}</span>
             )}
           </span>

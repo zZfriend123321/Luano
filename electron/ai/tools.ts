@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync, existsSync } from "fs"
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from "fs"
+import { dirname, relative, join } from "path"
 import { searchDocs } from "./rag"
 import {
   getBridgeTree,
@@ -13,11 +14,13 @@ import type Anthropic from "@anthropic-ai/sdk"
 export const TOOLS: Anthropic.Tool[] = [
   {
     name: "read_file",
-    description: "Read the full content of a file in the project",
+    description: "Read the content of a file. Optionally specify line range for large files.",
     input_schema: {
       type: "object" as const,
       properties: {
-        path: { type: "string", description: "Absolute path to the file" }
+        path: { type: "string", description: "Absolute path to the file" },
+        start_line: { type: "number", description: "Start line number (1-based, optional)" },
+        end_line: { type: "number", description: "End line number (inclusive, optional)" }
       },
       required: ["path"]
     }
@@ -134,6 +137,57 @@ export const TOOLS: Anthropic.Tool[] = [
       },
       required: ["path", "property", "value"]
     }
+  },
+  {
+    name: "list_files",
+    description:
+      "List files and directories at the given path. Use to explore and understand project structure before making changes.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        path: { type: "string", description: "Absolute path to the directory" },
+        recursive: {
+          type: "boolean",
+          description: "List recursively up to 3 levels deep (default: false)"
+        }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "grep_files",
+    description:
+      "Search for a text pattern across project files. Returns matching lines with file paths and line numbers. Useful for finding usages, references, or patterns.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        pattern: {
+          type: "string",
+          description: "Text pattern to search for (literal string match)"
+        },
+        path: {
+          type: "string",
+          description: "Absolute path to the directory to search in"
+        },
+        file_pattern: {
+          type: "string",
+          description:
+            "Comma-separated file extensions to search, e.g. '.lua,.luau,.json' (default: '.lua,.luau')"
+        }
+      },
+      required: ["pattern", "path"]
+    }
+  },
+  {
+    name: "delete_file",
+    description: "Delete a file from the project",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        path: { type: "string", description: "Absolute path to the file to delete" }
+      },
+      required: ["path"]
+    }
   }
 ]
 
@@ -186,7 +240,19 @@ export async function executeTool(
       case "read_file": {
         const path = String(input.path ?? "")
         if (!existsSync(path)) return { success: false, output: `File not found: ${path}` }
-        return { success: true, output: readFileSync(path, "utf-8") }
+        const content = readFileSync(path, "utf-8")
+        const startLine = Number(input.start_line) || 0
+        const endLine = Number(input.end_line) || 0
+        if (startLine > 0 || endLine > 0) {
+          const lines = content.split("\n")
+          const start = Math.max(0, startLine - 1)
+          const end = endLine > 0 ? Math.min(lines.length, endLine) : lines.length
+          return {
+            success: true,
+            output: lines.slice(start, end).map((l, i) => `${start + i + 1}: ${l}`).join("\n")
+          }
+        }
+        return { success: true, output: content }
       }
 
       case "edit_file": {
@@ -205,6 +271,8 @@ export async function executeTool(
       case "create_file": {
         const path = String(input.path ?? "")
         const content = String(input.content ?? "")
+        const dir = dirname(path)
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
         writeFileSync(path, content, "utf-8")
         return { success: true, output: "File created successfully", filePath: path }
       }
@@ -288,6 +356,74 @@ export async function executeTool(
 
         const id = queueScript(code)
         return await pollCommandResult(id)
+      }
+
+      // ── 탐색 도구 ──────────────────────────────────────────────────────────
+      case "list_files": {
+        const dirPath = String(input.path ?? "")
+        const recursive = Boolean(input.recursive)
+        if (!existsSync(dirPath)) return { success: false, output: `Directory not found: ${dirPath}` }
+        const results: string[] = []
+        const maxDepth = recursive ? 3 : 1
+        const walkDir = (dir: string, depth: number): void => {
+          if (depth > maxDepth || results.length > 200) return
+          try {
+            const entries = readdirSync(dir, { withFileTypes: true })
+            for (const entry of entries) {
+              if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "Packages") continue
+              const rel = relative(dirPath, join(dir, entry.name))
+              if (entry.isDirectory()) {
+                results.push(`${rel}/`)
+                if (recursive) walkDir(join(dir, entry.name), depth + 1)
+              } else {
+                results.push(rel)
+              }
+            }
+          } catch { /* skip unreadable dirs */ }
+        }
+        walkDir(dirPath, 0)
+        return { success: true, output: results.join("\n") || "(empty directory)" }
+      }
+
+      case "grep_files": {
+        const pattern = String(input.pattern ?? "")
+        const searchPath = String(input.path ?? "")
+        const filePatternStr = String(input.file_pattern ?? ".lua,.luau")
+        if (!pattern || !searchPath) return { success: false, output: "pattern and path are required" }
+        const exts = filePatternStr.split(",").map((e) => e.trim())
+        const results: string[] = []
+        const searchDir = (dir: string): void => {
+          if (results.length > 50) return
+          try {
+            const entries = readdirSync(dir, { withFileTypes: true })
+            for (const entry of entries) {
+              if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "Packages") continue
+              const fullPath = join(dir, entry.name)
+              if (entry.isDirectory()) {
+                searchDir(fullPath)
+              } else if (exts.some((ext) => entry.name.endsWith(ext))) {
+                try {
+                  const lines = readFileSync(fullPath, "utf-8").split("\n")
+                  for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].includes(pattern)) {
+                      results.push(`${relative(searchPath, fullPath)}:${i + 1}: ${lines[i].trim()}`)
+                      if (results.length > 50) return
+                    }
+                  }
+                } catch { /* skip unreadable files */ }
+              }
+            }
+          } catch { /* skip unreadable dirs */ }
+        }
+        searchDir(searchPath)
+        return { success: true, output: results.join("\n") || "No matches found" }
+      }
+
+      case "delete_file": {
+        const path = String(input.path ?? "")
+        if (!existsSync(path)) return { success: false, output: `File not found: ${path}` }
+        unlinkSync(path)
+        return { success: true, output: "File deleted successfully", filePath: path }
       }
 
       default:

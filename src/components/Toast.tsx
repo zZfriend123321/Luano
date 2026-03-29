@@ -33,7 +33,7 @@ export function ToastContainer(): JSX.Element {
   if (toasts.length === 0) return <></>
 
   return (
-    <div className="fixed bottom-8 right-4 flex flex-col gap-2 z-50 pointer-events-none">
+    <div className="fixed bottom-10 right-4 flex flex-col gap-2 z-50 pointer-events-none">
       {toasts.map((t) => (
         <div
           key={t.id}
