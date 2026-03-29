@@ -5,7 +5,7 @@ import { formatFile } from "../sidecar/stylua"
 import { join } from "path"
 
 let watcher: FSWatcher | null = null
-let debounceTimers: Map<string, NodeJS.Timeout> = new Map()
+const debounceTimers: Map<string, NodeJS.Timeout> = new Map()
 
 export function watchProject(projectPath: string): void {
   stopWatcher()

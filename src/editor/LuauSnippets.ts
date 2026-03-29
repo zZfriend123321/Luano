@@ -153,7 +153,7 @@ local function updateData(player: Player, callback: (any) -> any)
 \tlocal key = "Player_" .. player.UserId
 \tlocal success, err = pcall(function()
 \t\t\${1:store}:UpdateAsync(key, function(oldData)
-\t\t\tlocal data = oldData or \${3:{\}}
+\t\t\tlocal data = oldData or \${3:{}}
 \t\t\treturn callback(data)
 \t\t end)
 \tend)

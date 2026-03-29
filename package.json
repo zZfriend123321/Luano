@@ -17,7 +17,9 @@
     "package": "electron-vite build && electron-builder",
     "package:win": "electron-vite build && electron-builder --win --x64",
     "package:mac": "electron-vite build && electron-builder --mac",
-    "package:linux": "electron-vite build && electron-builder --linux"
+    "package:linux": "electron-vite build && electron-builder --linux",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"electron/**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.web.json --noEmit && tsc -p tsconfig.node.json --noEmit"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -27,11 +29,16 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "electron": "^31.0.2",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.2",
@@ -74,7 +81,9 @@
       {
         "from": "resources/binaries/${os}",
         "to": "binaries",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "resources/roblox-docs",
@@ -95,7 +104,12 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "resources/icons/icon.ico",
       "signingHashAlgorithms": null,
@@ -110,7 +124,13 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "resources/icons/icon.icns",
       "category": "public.app-category.developer-tools"

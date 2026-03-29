@@ -1,7 +1,6 @@
 import { spawn, ChildProcess } from "child_process"
 import { join } from "path"
 import { existsSync } from "fs"
-import { app } from "electron"
 import { is } from "@electron-toolkit/utils"
 
 export function getBinaryPath(name: string): string {

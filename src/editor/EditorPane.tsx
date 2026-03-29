@@ -79,7 +79,7 @@ export function EditorPane(): JSX.Element {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
   // Keep a ref so the Monaco command callback always has the latest value
   const inlineEditOpenRef = useRef(false)
-  inlineEditOpenRef.current = inlineEditOpen
+  useEffect(() => { inlineEditOpenRef.current = inlineEditOpen }, [inlineEditOpen])
 
   // ── LSP client lifecycle ───────────────────────────────────────────────────
   useEffect(() => {

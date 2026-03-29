@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync, existsSync } from "fs"
-import { join, extname, relative, basename } from "path"
+import { join, extname, relative } from "path"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

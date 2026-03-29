@@ -166,6 +166,16 @@ interface Window {
     // Topology
     analyzeTopology: (projectPath: string) => Promise<TopologyResult>
 
+    // Cross-script analysis
+    analyzeCrossScript: (projectPath: string) => Promise<unknown>
+    perfLint: (projectPath: string) => Promise<unknown>
+
+    // DataStore schema
+    datastoreLoadSchemas: (projectPath: string) => Promise<unknown[]>
+    datastoreSaveSchema: (projectPath: string, schema: unknown) => Promise<{ success: boolean }>
+    datastoreDeleteSchema: (projectPath: string, name: string) => Promise<{ success: boolean }>
+    datastoreGenerateCode: (schema: unknown) => Promise<string>
+
     // Error Explainer
     explainError: (errorText: string, context: unknown) => Promise<string>
 

@@ -52,7 +52,7 @@ export function TerminalPane({ projectPath, onClose, height }: TerminalPaneProps
   const fitRef       = useRef<FitAddon | null>(null)
   const termIdRef    = useRef<string | null>(null)
   const cleanupRef   = useRef<(() => void) | null>(null)
-  const [ready, setReady]   = useState(false)
+  const [_ready, setReady]   = useState(false)
   const [exited, setExited] = useState(false)
 
   // ── Boot terminal ────────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ export function TerminalPane({ projectPath, onClose, height }: TerminalPaneProps
 
   // Boot on mount / project change
   useEffect(() => {
-    boot()
+    void boot()
     return () => {
       cleanupRef.current?.()
       cleanupRef.current = null

@@ -178,7 +178,7 @@ export function DataStorePanel(): JSX.Element {
 
   const loadSchemas = useCallback(async () => {
     if (!projectPath) return
-    const result = await window.api.datastoreLoadSchemas(projectPath) as SchemaFile
+    const result = await window.api.datastoreLoadSchemas(projectPath) as unknown as SchemaFile
     setSchemas(result.schemas)
     if (result.schemas.length > 0 && !selected) {
       setSelected(result.schemas[0].name)

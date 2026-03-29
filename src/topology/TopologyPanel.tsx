@@ -166,10 +166,6 @@ function computeLayout(result: TopologyResult): {
 
 // ── SVG Helpers ───────────────────────────────────────────────────────────────
 
-function nodeCenterX(node: LayoutNode): number {
-  return node.x + node.width / 2
-}
-
 function nodeCenterY(node: LayoutNode): number {
   return node.y + node.height / 2
 }
