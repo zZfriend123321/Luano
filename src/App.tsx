@@ -86,9 +86,9 @@ function EmptyEditor({
 }
 
 export default function App(): JSX.Element {
-  const { projectPath, openFiles, setProject, setFileTree, openFile } = useProjectStore()
+  const { projectPath, openFiles, dirtyFiles, setProject, closeProject, setFileTree, openFile } = useProjectStore()
   const { setStatus, addLog } = useRojoStore()
-  const { setGlobalSummary } = useAIStore()
+  const { setGlobalSummary, clearMessages } = useAIStore()
   const t = useT()
   const [activePanel, setActivePanel] = useState<SidePanel>("explorer")
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
@@ -185,17 +185,34 @@ export default function App(): JSX.Element {
     return () => window.removeEventListener("keydown", handler)
   }, [projectPath])
 
+  const [switchConfirm, setSwitchConfirm] = useState<{ action: "open" | "new"; path?: string } | null>(null)
+
+  const switchToProject = useCallback(async (path: string, isNew: boolean) => {
+    closeProject()
+    clearMessages()
+    setGlobalSummary("")
+    if (isNew) await window.api.initProject(path)
+    await openPath(path)
+  }, [closeProject, clearMessages, setGlobalSummary, openPath])
+
   const handleOpenFolder = async () => {
     const path = await window.api.openFolder()
     if (!path) return
-    await openPath(path)
+    if (projectPath && dirtyFiles.length > 0) {
+      setSwitchConfirm({ action: "open", path })
+      return
+    }
+    await switchToProject(path, false)
   }
 
   const handleNewProject = async () => {
     const path = await window.api.openFolder()
     if (!path) return
-    await window.api.initProject(path)
-    await openPath(path)
+    if (projectPath && dirtyFiles.length > 0) {
+      setSwitchConfirm({ action: "new", path })
+      return
+    }
+    await switchToProject(path, true)
   }
 
   // ── 터미널 리사이즈 드래그 ───────────────────────────────────────────────────
@@ -246,17 +263,18 @@ export default function App(): JSX.Element {
         </div>
 
         <div className="ml-auto flex items-center gap-1">
-          {!projectPath && (
-            <button
-              onClick={handleOpenFolder}
-              className="px-3 py-1 text-xs rounded-md transition-all duration-150"
-              style={{ color: "var(--text-secondary)", background: "transparent" }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.background = "var(--bg-elevated)"; (e.target as HTMLElement).style.color = "var(--text-primary)" }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.background = "transparent"; (e.target as HTMLElement).style.color = "var(--text-secondary)" }}
-            >
-              Open Folder
-            </button>
-          )}
+          <button
+            onClick={handleOpenFolder}
+            title="Open Folder"
+            className="w-7 h-7 flex items-center justify-center rounded-md transition-all duration-150"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={e => { (e.currentTarget).style.background = "var(--bg-elevated)"; (e.currentTarget).style.color = "var(--text-secondary)" }}
+            onMouseLeave={e => { (e.currentTarget).style.background = "transparent"; (e.currentTarget).style.color = "var(--text-muted)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
           <button
             onClick={() => setSettingsOpen(true)}
             title="Settings"
@@ -367,6 +385,58 @@ export default function App(): JSX.Element {
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
       {quickOpenVisible && <QuickOpen onClose={() => setQuickOpenVisible(false)} />}
       <ToastContainer />
+
+      {/* Switch project confirmation (unsaved changes) */}
+      {switchConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in"
+          style={{ background: "rgba(5,8,15,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSwitchConfirm(null) }}
+        >
+          <div
+            className="rounded-xl overflow-hidden animate-slide-up"
+            style={{
+              background: "var(--bg-panel)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.7)",
+              width: "380px"
+            }}
+          >
+            <div className="px-5 pt-5 pb-3">
+              <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Switch Project
+              </p>
+              <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+                You have <span style={{ color: "var(--accent)" }}>{dirtyFiles.length} unsaved file{dirtyFiles.length > 1 ? "s" : ""}</span> in the current project. Unsaved changes will be lost.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-4 pb-4 pt-1">
+              <button
+                onClick={async () => {
+                  const { path, action } = switchConfirm
+                  setSwitchConfirm(null)
+                  if (path) await switchToProject(path, action === "new")
+                }}
+                className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
+                style={{ background: "var(--accent)", color: "white" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--accent)"}
+              >
+                Switch Anyway
+              </button>
+              <button
+                onClick={() => setSwitchConfirm(null)}
+                className="flex-1 py-1.5 rounded-lg text-xs transition-all duration-150"
+                style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-surface)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

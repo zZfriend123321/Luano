@@ -19,6 +19,7 @@ interface ProjectStore {
   dirtyFiles: string[]
 
   setProject: (path: string, tree: FileEntry[], lspPort: number) => void
+  closeProject: () => void
   openFile: (path: string, content: string) => void
   closeFile: (path: string) => void
   setActiveFile: (path: string) => void
@@ -40,6 +41,17 @@ export const useProjectStore = create<ProjectStore>()(
 
       setProject: (path, tree, lspPort) =>
         set({ projectPath: path, fileTree: tree, lspPort }),
+
+      closeProject: () =>
+        set({
+          projectPath: null,
+          fileTree: [],
+          openFiles: [],
+          activeFile: null,
+          fileContents: {},
+          lspPort: null,
+          dirtyFiles: []
+        }),
 
       openFile: (path, content) => {
         const { openFiles, fileContents } = get()
