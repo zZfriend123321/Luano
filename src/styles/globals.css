@@ -2,26 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg-base: #05080f;
-  --bg-panel: #080d18;
-  --bg-elevated: #0c1423;
-  --bg-surface: #101d30;
-  --bg-hover: #152538;
-  --border-subtle: #111d30;
-  --border: #1a2d45;
-  --border-strong: #243f62;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-muted: rgba(37, 99, 235, 0.12);
-  --accent-glow: rgba(37, 99, 235, 0.3);
-  --text-primary: #ffffff;
-  --text-secondary: #c8ddf5;
-  --text-muted: #7aaac8;
-  --text-ghost: #3a5a7a;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #e11d48;
+/* ── Dark theme (VS Code style) ──────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --bg-base: #1e1e1e;
+  --bg-panel: #252526;
+  --bg-elevated: #2d2d2d;
+  --bg-surface: #333333;
+  --bg-hover: #3a3a3a;
+  --border-subtle: #2d2d2d;
+  --border: #3e3e3e;
+  --border-strong: #505050;
+  --accent: #569cd6;
+  --accent-hover: #4a8cc7;
+  --accent-muted: rgba(86, 156, 214, 0.1);
+  --accent-glow: rgba(86, 156, 214, 0.2);
+  --text-primary: #d4d4d4;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --text-ghost: #5a5a5a;
+  --success: #4ec9b0;
+  --warning: #dcdcaa;
+  --danger: #f44747;
+}
+
+/* ── Tokyo Night theme ───────────────────────────────────────── */
+[data-theme="tokyo-night"] {
+  --bg-base: #1a1b26;
+  --bg-panel: #1f2133;
+  --bg-elevated: #262840;
+  --bg-surface: #2c2e48;
+  --bg-hover: #33354e;
+  --border-subtle: #2a2c42;
+  --border: #363854;
+  --border-strong: #474a6b;
+  --accent: #7aa2f7;
+  --accent-hover: #5d87e0;
+  --accent-muted: rgba(122, 162, 247, 0.1);
+  --accent-glow: rgba(122, 162, 247, 0.2);
+  --text-primary: #c0caf5;
+  --text-secondary: #a9b1d6;
+  --text-muted: #6b7394;
+  --text-ghost: #444b6a;
+  --success: #73daca;
+  --warning: #e0af68;
+  --danger: #f7768e;
 }
 
 * {
@@ -70,7 +95,7 @@ body {
   user-select: text;
 }
 .selectable ::selection {
-  background: rgba(37, 99, 235, 0.3);
+  background: rgba(122, 162, 247, 0.25);
   color: var(--text-primary);
 }
 
@@ -115,8 +140,8 @@ button:active {
 }
 
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
-  50%       { box-shadow: 0 0 14px 3px rgba(37, 99, 235, 0.28); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(122, 162, 247, 0); }
+  50%       { box-shadow: 0 0 14px 3px rgba(122, 162, 247, 0.2); }
 }
 
 @keyframes shimmer {
@@ -165,5 +190,5 @@ button:active {
 
 /* ── Subtle gradient border ─────────────────────────────────────── */
 .border-gradient-blue {
-  border-image: linear-gradient(180deg, rgba(37,99,235,0.5), rgba(37,99,235,0)) 1;
+  border-image: linear-gradient(180deg, rgba(122,162,247,0.4), rgba(122,162,247,0)) 1;
 }

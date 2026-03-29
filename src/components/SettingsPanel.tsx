@@ -128,8 +128,13 @@ function KeyField({
   )
 }
 
+const THEMES = [
+  { id: "dark" as const, label: "Dark" },
+  { id: "tokyo-night" as const, label: "Tokyo Night" }
+]
+
 export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
-  const { language, setLanguage, apiKey, setApiKey, openaiKey, setOpenAIKey, provider, setProvider, model, setModel } = useSettingsStore()
+  const { language, setLanguage, theme, setTheme, apiKey, setApiKey, openaiKey, setOpenAIKey, provider, setProvider, model, setModel } = useSettingsStore()
   const t = useT()
   const [models, setModels] = useState<ProviderModels>({ anthropic: [], openai: [] })
   const [visible, setVisible] = useState(false)
@@ -225,6 +230,28 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
                   }}
                 >
                   {lang.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Theme */}
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Theme</SectionLabel>
+            <div className="flex gap-2">
+              {THEMES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id)}
+                  className="px-4 py-1.5 rounded-lg text-xs transition-all duration-150"
+                  style={{
+                    background: theme === t.id ? "var(--accent)" : "var(--bg-elevated)",
+                    color: theme === t.id ? "white" : "var(--text-secondary)",
+                    border: `1px solid ${theme === t.id ? "transparent" : "var(--border)"}`,
+                    fontWeight: theme === t.id ? 500 : 400
+                  }}
+                >
+                  {t.label}
                 </button>
               ))}
             </div>

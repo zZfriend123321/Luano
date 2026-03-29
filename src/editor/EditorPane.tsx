@@ -5,6 +5,7 @@ import { useEffect, useCallback, useState, useRef } from "react"
 import Editor from "@monaco-editor/react"
 import type * as Monaco from "monaco-editor"
 import { useProjectStore } from "../stores/projectStore"
+import { useSettingsStore } from "../stores/settingsStore"
 import { useIpcEvent } from "../hooks/useIpc"
 import { InlineEditOverlay } from "../ai/InlineEditOverlay"
 import { startLuauLanguageClient, stopLuauLanguageClient } from "./LuauLanguageClient"
@@ -19,41 +20,82 @@ function defineEditorTheme(monaco: typeof Monaco): void {
     registerLuauSnippets(monaco)
     _snippetsRegistered = true
   }
+
+  // Dark theme (VS Code style)
   monaco.editor.defineTheme("luano-dark", {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "comment",    foreground: "3a5272", fontStyle: "italic" },
-      { token: "keyword",    foreground: "6ba3f5" },
-      { token: "string",     foreground: "7dd3a8" },
-      { token: "number",     foreground: "c4a7fb" },
-      { token: "identifier", foreground: "d4e2f4" },
-      { token: "type",       foreground: "60b8ff" },
-      { token: "function",   foreground: "8ec8fb" }
+      { token: "comment",    foreground: "6a9955", fontStyle: "italic" },
+      { token: "keyword",    foreground: "569cd6" },
+      { token: "string",     foreground: "ce9178" },
+      { token: "number",     foreground: "b5cea8" },
+      { token: "identifier", foreground: "d4d4d4" },
+      { token: "type",       foreground: "4ec9b0" },
+      { token: "function",   foreground: "dcdcaa" }
     ],
     colors: {
-      "editor.background":                   "#080d18",
-      "editor.foreground":                   "#d4e2f4",
-      "editor.lineHighlightBackground":      "#0c1423",
-      "editor.selectionBackground":          "#1d4ed840",
-      "editor.inactiveSelectionBackground":  "#1a2d4530",
-      "editorCursor.foreground":             "#2563eb",
-      "editorLineNumber.foreground":         "#1e3050",
-      "editorLineNumber.activeForeground":   "#3a5272",
-      "editorIndentGuide.background":        "#111d30",
-      "editorIndentGuide.activeBackground":  "#1a2d45",
-      "editorWidget.background":             "#0c1423",
-      "editorWidget.border":                 "#1a2d45",
-      "editorSuggestWidget.background":      "#0c1423",
-      "editorSuggestWidget.border":          "#1a2d45",
-      "editorSuggestWidget.selectedBackground": "#152538",
-      "input.background":                    "#080d18",
-      "input.border":                        "#1a2d45",
-      "scrollbarSlider.background":          "#1a2d4560",
-      "scrollbarSlider.hoverBackground":     "#243f6280",
-      "scrollbarSlider.activeBackground":    "#2563eb60",
-      "diffEditor.insertedTextBackground":   "#10b98120",
-      "diffEditor.removedTextBackground":    "#e11d4820"
+      "editor.background":                   "#1e1e1e",
+      "editor.foreground":                   "#d4d4d4",
+      "editor.lineHighlightBackground":      "#252526",
+      "editor.selectionBackground":          "#264f7840",
+      "editor.inactiveSelectionBackground":  "#3a3d4130",
+      "editorCursor.foreground":             "#569cd6",
+      "editorLineNumber.foreground":         "#5a5a5a",
+      "editorLineNumber.activeForeground":   "#c6c6c6",
+      "editorIndentGuide.background":        "#404040",
+      "editorIndentGuide.activeBackground":  "#707070",
+      "editorWidget.background":             "#252526",
+      "editorWidget.border":                 "#3e3e3e",
+      "editorSuggestWidget.background":      "#252526",
+      "editorSuggestWidget.border":          "#3e3e3e",
+      "editorSuggestWidget.selectedBackground": "#2d2d2d",
+      "input.background":                    "#1e1e1e",
+      "input.border":                        "#3e3e3e",
+      "scrollbarSlider.background":          "#4e4e4ea0",
+      "scrollbarSlider.hoverBackground":     "#646464a0",
+      "scrollbarSlider.activeBackground":    "#569cd660",
+      "diffEditor.insertedTextBackground":   "#4ec9b020",
+      "diffEditor.removedTextBackground":    "#f4474720"
+    }
+  })
+
+  // Tokyo Night theme
+  monaco.editor.defineTheme("luano-tokyo-night", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "comment",    foreground: "565f89", fontStyle: "italic" },
+      { token: "keyword",    foreground: "9d7cd8" },
+      { token: "string",     foreground: "9ece6a" },
+      { token: "number",     foreground: "ff9e64" },
+      { token: "identifier", foreground: "c0caf5" },
+      { token: "type",       foreground: "2ac3de" },
+      { token: "function",   foreground: "7aa2f7" }
+    ],
+    colors: {
+      "editor.background":                   "#1a1b26",
+      "editor.foreground":                   "#c0caf5",
+      "editor.lineHighlightBackground":      "#1f2133",
+      "editor.selectionBackground":          "#33467c50",
+      "editor.inactiveSelectionBackground":  "#292e4230",
+      "editorCursor.foreground":             "#7aa2f7",
+      "editorLineNumber.foreground":         "#3b3f5c",
+      "editorLineNumber.activeForeground":   "#737aa2",
+      "editorIndentGuide.background":        "#292e42",
+      "editorIndentGuide.activeBackground":  "#3b3f5c",
+      "editorWidget.background":             "#1f2133",
+      "editorWidget.border":                 "#363854",
+      "editorSuggestWidget.background":      "#1f2133",
+      "editorSuggestWidget.border":          "#363854",
+      "editorSuggestWidget.selectedBackground": "#262840",
+      "input.background":                    "#1a1b26",
+      "input.border":                        "#363854",
+      "scrollbarSlider.background":          "#363854a0",
+      "scrollbarSlider.hoverBackground":     "#474a6ba0",
+      "scrollbarSlider.activeBackground":    "#7aa2f760",
+      "diffEditor.insertedTextBackground":   "#73daca20",
+      "diffEditor.removedTextBackground":    "#f7768e20"
     }
   })
 }
@@ -73,6 +115,8 @@ export function EditorPane(): JSX.Element {
     openFiles, activeFile, fileContents, lspPort, dirtyFiles,
     closeFile, setActiveFile, updateFileContent, markClean
   } = useProjectStore()
+  const appTheme = useSettingsStore((s) => s.theme)
+  const monacoTheme = appTheme === "tokyo-night" ? "luano-tokyo-night" : "luano-dark"
 
   const [inlineEditOpen, setInlineEditOpen] = useState(false)
   const [closeConfirm, setCloseConfirm] = useState<string | null>(null)
@@ -295,7 +339,7 @@ export function EditorPane(): JSX.Element {
             key={activeFile}
             height="100%"
             language="lua"
-            theme="luano-dark"
+            theme={monacoTheme}
             value={fileContents[activeFile] ?? ""}
             onChange={handleEditorChange}
             onMount={handleEditorMount}

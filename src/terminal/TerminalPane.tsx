@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Terminal } from "xterm"
 import { FitAddon } from "xterm-addon-fit"
+import { useSettingsStore } from "../stores/settingsStore"
 
 // xterm CSS injected once via Vite-compatible dynamic import
 let xtermCssLoaded = false
@@ -46,6 +47,53 @@ interface TerminalPaneProps {
   height: number
 }
 
+const TERMINAL_THEMES = {
+  dark: {
+    background:   "#1e1e1e",
+    foreground:   "#d4d4d4",
+    cursor:       "#569cd6",
+    cursorAccent: "#1e1e1e",
+    black:        "#252526",
+    brightBlack:  "#5a5a5a",
+    red:          "#f44747",
+    brightRed:    "#f48771",
+    green:        "#4ec9b0",
+    brightGreen:  "#73c991",
+    yellow:       "#dcdcaa",
+    brightYellow: "#e5c07b",
+    blue:         "#569cd6",
+    brightBlue:   "#6cb6ff",
+    magenta:      "#c586c0",
+    brightMagenta:"#d18ec2",
+    cyan:         "#4fc1ff",
+    brightCyan:   "#9cdcfe",
+    white:        "#d4d4d4",
+    brightWhite:  "#e8e8e8",
+  },
+  "tokyo-night": {
+    background:   "#1a1b26",
+    foreground:   "#c0caf5",
+    cursor:       "#7aa2f7",
+    cursorAccent: "#1a1b26",
+    black:        "#1f2133",
+    brightBlack:  "#444b6a",
+    red:          "#f7768e",
+    brightRed:    "#ff9a9e",
+    green:        "#73daca",
+    brightGreen:  "#9ece6a",
+    yellow:       "#e0af68",
+    brightYellow: "#ffcb6b",
+    blue:         "#7aa2f7",
+    brightBlue:   "#89b4fa",
+    magenta:      "#bb9af7",
+    brightMagenta:"#c8a8f7",
+    cyan:         "#2ac3de",
+    brightCyan:   "#7dcfff",
+    white:        "#c0caf5",
+    brightWhite:  "#e0e6f7",
+  }
+} as const
+
 export function TerminalPane({ projectPath, onClose, height }: TerminalPaneProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef      = useRef<Terminal | null>(null)
@@ -65,29 +113,9 @@ export function TerminalPane({ projectPath, onClose, height }: TerminalPaneProps
 
     ensureXtermStyles()
 
+    const currentTheme = useSettingsStore.getState().theme
     const term = new Terminal({
-      theme: {
-        background:   "#080d18",
-        foreground:   "#d4e2f4",
-        cursor:       "#2563eb",
-        cursorAccent: "#080d18",
-        black:        "#0c1423",
-        brightBlack:  "#1a2d45",
-        red:          "#e11d48",
-        brightRed:    "#f43f5e",
-        green:        "#10b981",
-        brightGreen:  "#34d399",
-        yellow:       "#f59e0b",
-        brightYellow: "#fbbf24",
-        blue:         "#2563eb",
-        brightBlue:   "#3b82f6",
-        magenta:      "#8b5cf6",
-        brightMagenta:"#a78bfa",
-        cyan:         "#06b6d4",
-        brightCyan:   "#22d3ee",
-        white:        "#d4e2f4",
-        brightWhite:  "#f8fafc",
-      },
+      theme: TERMINAL_THEMES[currentTheme],
       fontFamily:  "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
       fontSize:    13,
       lineHeight:  1.4,

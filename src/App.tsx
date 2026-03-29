@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useProjectStore } from "./stores/projectStore"
 import { useRojoStore } from "./stores/rojoStore"
 import { useAIStore } from "./stores/aiStore"
+import { useSettingsStore } from "./stores/settingsStore"
 import { useIpcEvent } from "./hooks/useIpc"
 import { Sidebar, SidePanel } from "./components/Sidebar"
 import { SettingsPanel } from "./components/SettingsPanel"
@@ -25,15 +26,6 @@ const TERMINAL_MIN = 80
 const TERMINAL_MAX = 600
 const TERMINAL_DEFAULT = 220
 
-function IconSettings(): JSX.Element {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
-}
-
 function IconChat(): JSX.Element {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -53,15 +45,15 @@ function EmptyEditor({
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-6 animate-fade-in">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-[#0c1423] border border-[#1a2d45] flex items-center justify-center">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </div>
         <div className="text-center">
-          <p className="text-sm font-medium text-[#e2e8f4]">{t("noProject")}</p>
-          <p className="text-xs text-[#3a5272] mt-1">{t("noProjectHint")}</p>
+          <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{t("noProject")}</p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{t("noProjectHint")}</p>
         </div>
       </div>
       <div className="flex gap-2">
@@ -76,7 +68,10 @@ function EmptyEditor({
         </button>
         <button
           onClick={onOpenFolder}
-          className="px-5 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-medium rounded-lg transition-all duration-150"
+          className="px-5 py-2 text-xs font-medium rounded-lg transition-all duration-150"
+          style={{ background: "var(--accent)", color: "#1a1b26" }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--accent)"}
         >
           {t("openFolder")}
         </button>
@@ -89,7 +84,13 @@ export default function App(): JSX.Element {
   const { projectPath, openFiles, dirtyFiles, setProject, closeProject, setFileTree, openFile } = useProjectStore()
   const { setStatus, addLog } = useRojoStore()
   const { setGlobalSummary, clearMessages } = useAIStore()
+  const theme = useSettingsStore((s) => s.theme)
   const t = useT()
+
+  // Apply theme to document root
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme)
+  }, [theme])
   const [activePanel, setActivePanel] = useState<SidePanel>("explorer")
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -236,54 +237,31 @@ export default function App(): JSX.Element {
     window.addEventListener("mouseup", onUp)
   }
 
-  const projectName = projectPath?.split(/[/\\]/).pop() ?? ""
-
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
       {/* Titlebar */}
       <div
-        className="h-9 flex items-center px-4 flex-shrink-0 drag-region"
+        className="h-9 flex items-center px-2 flex-shrink-0 drag-region"
         style={{ background: "var(--bg-panel)", borderBottom: "1px solid var(--border-subtle)" }}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-md bg-[#2563eb] flex items-center justify-center flex-shrink-0" style={{ boxShadow: "0 0 8px rgba(37,99,235,0.5)" }}>
-            <span className="text-white font-bold" style={{ fontSize: "9px", letterSpacing: "-0.5px" }}>LU</span>
-          </div>
-          <span className="text-xs font-semibold" style={{ color: "var(--text-primary)", letterSpacing: "0.3px" }}>
-            Luano
-          </span>
-          {projectName && (
-            <>
-              <span style={{ color: "var(--border-strong)", fontSize: "12px" }}>/</span>
-              <span className="text-xs truncate max-w-[180px]" style={{ color: "var(--text-secondary)" }}>
-                {projectName}
-              </span>
-            </>
-          )}
-        </div>
-
-        <div className="ml-auto flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={handleOpenFolder}
-            title="Open Folder"
-            className="w-7 h-7 flex items-center justify-center rounded-md transition-all duration-150"
-            style={{ color: "var(--text-muted)" }}
-            onMouseEnter={e => { (e.currentTarget).style.background = "var(--bg-elevated)"; (e.currentTarget).style.color = "var(--text-secondary)" }}
-            onMouseLeave={e => { (e.currentTarget).style.background = "transparent"; (e.currentTarget).style.color = "var(--text-muted)" }}
+            className="px-2.5 h-7 flex items-center rounded-md text-xs transition-all duration-150"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={e => { (e.currentTarget).style.background = "var(--bg-elevated)"; (e.currentTarget).style.color = "var(--text-primary)" }}
+            onMouseLeave={e => { (e.currentTarget).style.background = "transparent"; (e.currentTarget).style.color = "var(--text-secondary)" }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-            </svg>
+            File
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
-            title="Settings"
-            className="w-7 h-7 flex items-center justify-center rounded-md transition-all duration-150"
-            style={{ color: "var(--text-muted)" }}
-            onMouseEnter={e => { (e.currentTarget).style.background = "var(--bg-elevated)"; (e.currentTarget).style.color = "var(--text-secondary)" }}
-            onMouseLeave={e => { (e.currentTarget).style.background = "transparent"; (e.currentTarget).style.color = "var(--text-muted)" }}
+            className="px-2.5 h-7 flex items-center rounded-md text-xs transition-all duration-150"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={e => { (e.currentTarget).style.background = "var(--bg-elevated)"; (e.currentTarget).style.color = "var(--text-primary)" }}
+            onMouseLeave={e => { (e.currentTarget).style.background = "transparent"; (e.currentTarget).style.color = "var(--text-secondary)" }}
           >
-            <IconSettings />
+            Settings
           </button>
         </div>
       </div>

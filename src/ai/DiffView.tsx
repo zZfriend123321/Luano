@@ -11,28 +11,28 @@ function defineTheme(monaco: typeof Monaco): void {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "comment",    foreground: "3a5272", fontStyle: "italic" },
-      { token: "keyword",    foreground: "6ba3f5" },
-      { token: "string",     foreground: "7dd3a8" },
-      { token: "number",     foreground: "c4a7fb" },
-      { token: "identifier", foreground: "d4e2f4" }
+      { token: "comment",    foreground: "565f89", fontStyle: "italic" },
+      { token: "keyword",    foreground: "9d7cd8" },
+      { token: "string",     foreground: "9ece6a" },
+      { token: "number",     foreground: "ff9e64" },
+      { token: "identifier", foreground: "c0caf5" }
     ],
     colors: {
-      "editor.background":                   "#080d18",
-      "editor.foreground":                   "#d4e2f4",
-      "editor.lineHighlightBackground":      "#0c1423",
-      "editor.selectionBackground":          "#1d4ed840",
-      "editorCursor.foreground":             "#2563eb",
-      "editorLineNumber.foreground":         "#1e3050",
-      "editorLineNumber.activeForeground":   "#3a5272",
-      "diffEditor.insertedTextBackground":   "#10b98122",
-      "diffEditor.removedTextBackground":    "#e11d4822",
-      "diffEditor.insertedLineBackground":   "#10b98112",
-      "diffEditor.removedLineBackground":    "#e11d4812",
-      "diffEditorGutter.insertedLineBackground": "#10b98130",
-      "diffEditorGutter.removedLineBackground":  "#e11d4830",
-      "scrollbarSlider.background":          "#1a2d4560",
-      "scrollbarSlider.hoverBackground":     "#243f6280"
+      "editor.background":                   "#1a1b26",
+      "editor.foreground":                   "#c0caf5",
+      "editor.lineHighlightBackground":      "#1f2133",
+      "editor.selectionBackground":          "#33467c50",
+      "editorCursor.foreground":             "#7aa2f7",
+      "editorLineNumber.foreground":         "#3b3f5c",
+      "editorLineNumber.activeForeground":   "#737aa2",
+      "diffEditor.insertedTextBackground":   "#73daca22",
+      "diffEditor.removedTextBackground":    "#f7768e22",
+      "diffEditor.insertedLineBackground":   "#73daca12",
+      "diffEditor.removedLineBackground":    "#f7768e12",
+      "diffEditorGutter.insertedLineBackground": "#73daca30",
+      "diffEditorGutter.removedLineBackground":  "#f7768e30",
+      "scrollbarSlider.background":          "#363854a0",
+      "scrollbarSlider.hoverBackground":     "#474a6ba0"
     }
   })
 }
