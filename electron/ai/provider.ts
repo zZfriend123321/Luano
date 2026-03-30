@@ -3,8 +3,43 @@ import OpenAI from "openai"
 import { store } from "../store"
 import { BrowserWindow } from "electron"
 
-// Re-export Pro features from agent module
-export { agentChat, inlineEdit, type AgentChatResult } from "./agent"
+// ── Pro Agent (dynamic — gracefully absent in Community edition) ─────────────
+
+export interface AgentChatResult {
+  modifiedFiles: string[]
+}
+
+type AgentModule = {
+  agentChat(messages: ChatMessage[], systemPrompt: string, streamChannel: string): Promise<AgentChatResult>
+  inlineEdit(filePath: string, fileContent: string, instruction: string, systemPrompt: string): Promise<string>
+}
+
+let _agent: AgentModule | null = null
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  _agent = require("./agent")
+} catch {
+  _agent = null
+}
+
+export async function agentChat(
+  messages: ChatMessage[],
+  systemPrompt: string,
+  streamChannel: string
+): Promise<AgentChatResult> {
+  if (!_agent) throw new Error("Agent mode requires Luano Pro")
+  return _agent.agentChat(messages, systemPrompt, streamChannel)
+}
+
+export async function inlineEdit(
+  filePath: string,
+  fileContent: string,
+  instruction: string,
+  systemPrompt: string
+): Promise<string> {
+  if (!_agent) throw new Error("Inline edit requires Luano Pro")
+  return _agent.inlineEdit(filePath, fileContent, instruction, systemPrompt)
+}
 
 export type Provider = "anthropic" | "openai"
 

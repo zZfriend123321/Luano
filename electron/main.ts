@@ -4,7 +4,10 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import { registerIpcHandlers } from "./ipc/handlers"
 import { RojoManager } from "./sidecar/rojo"
 import { LspManager } from "./lsp/manager"
-import { startBridgeServer, setBridgeWindow } from "./bridge/server"
+// Pro module — bridge server (dynamic)
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
+let bridgeServer: { startBridgeServer: () => void; setBridgeWindow: (w: any) => void } | null = null
+try { bridgeServer = require("./bridge/server") } catch {}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -30,7 +33,7 @@ function createWindow(): void {
 
   mainWindow.on("ready-to-show", () => {
     mainWindow!.show()
-    setBridgeWindow(mainWindow!)
+    bridgeServer?.setBridgeWindow(mainWindow!)
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -53,7 +56,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  startBridgeServer()
+  bridgeServer?.startBridgeServer()
   registerIpcHandlers()
   createWindow()
 

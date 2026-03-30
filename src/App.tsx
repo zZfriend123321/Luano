@@ -12,15 +12,43 @@ import { FileExplorer } from "./explorer/FileExplorer"
 import { EditorPane } from "./editor/EditorPane"
 import { ChatPanel } from "./ai/ChatPanel"
 import { RojoPanel } from "./rojo/RojoPanel"
-import { StudioPanel } from "./studio/StudioPanel"
-import { TopologyPanel } from "./topology/TopologyPanel"
 import { TerminalPane } from "./terminal/TerminalPane"
 import { StatusBar } from "./components/StatusBar"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { ToastContainer, toast } from "./components/Toast"
 import { TutorialOverlay, shouldShowTutorial } from "./components/TutorialOverlay"
-import { CrossScriptPanel } from "./analysis/CrossScriptPanel"
-import { DataStorePanel } from "./datastore/DataStorePanel"
+
+// ── Pro panels (dynamic — absent in Community edition) ────────────────────────
+import { lazy, Suspense, type ComponentType, type FC } from "react"
+
+const proPanelModules = import.meta.glob<Record<string, ComponentType>>([
+  "./studio/StudioPanel.tsx",
+  "./analysis/CrossScriptPanel.tsx",
+  "./datastore/DataStorePanel.tsx",
+  "./topology/TopologyPanel.tsx",
+])
+
+function ProPlaceholder({ name }: { name: string }): JSX.Element {
+  return (
+    <div className="flex items-center justify-center h-full" style={{ color: "var(--text-muted)", fontSize: 12 }}>
+      {name} requires Luano Pro
+    </div>
+  )
+}
+
+function loadProPanel(path: string, exportName: string, fallback: string): FC {
+  const loader = proPanelModules[path]
+  if (!loader) return () => <ProPlaceholder name={fallback} />
+  const Lazy = lazy(() =>
+    loader().then(m => ({ default: (m[exportName] as ComponentType) ?? (() => <ProPlaceholder name={fallback} />) }))
+  )
+  return () => <Suspense fallback={null}><Lazy /></Suspense>
+}
+
+const StudioPanel = loadProPanel("./studio/StudioPanel.tsx", "StudioPanel", "Studio Bridge")
+const CrossScriptPanel = loadProPanel("./analysis/CrossScriptPanel.tsx", "CrossScriptPanel", "Analysis")
+const DataStorePanel = loadProPanel("./datastore/DataStorePanel.tsx", "DataStorePanel", "DataStore")
+const TopologyPanel = loadProPanel("./topology/TopologyPanel.tsx", "TopologyPanel", "Topology")
 import { useT } from "./i18n/useT"
 
 const TERMINAL_MIN = 80

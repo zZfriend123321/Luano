@@ -15,19 +15,57 @@ import {
   setProvider, setModel, getProviderAndModel,
   MODELS
 } from "../ai/provider"
-import { buildGlobalSummary, buildSystemPrompt, buildDocsContext } from "../ai/context"
-import { analyzeTopology } from "../topology/analyzer"
-import { analyzeCrossScript } from "../analysis/cross-script"
-import { performanceLint, performanceLintFile } from "../analysis/performance-lint"
-import { loadSchemas, addSchema, deleteSchema, generateDataModule, generateMigration } from "../datastore/schema"
-import type { DataStoreSchema } from "../datastore/schema"
-import { getConsoleOutput, isStudioConnected } from "../mcp/client"
-import {
-  getBridgeTree, getBridgeLogs, isBridgeConnected,
-  clearBridgeLogs, queueScript, getCommandResult
-} from "../bridge/server"
 import { isPro, hasFeature, type ProFeature } from "../pro"
-import { isEnabled as telemetryEnabled, setEnabled as setTelemetry, getStats as telemetryStats, recordDiff, recordQuery } from "../telemetry/collector"
+
+// ── Pro modules (dynamic — gracefully absent in Community edition) ───────────
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+
+let buildGlobalSummary: (projectPath: string) => Promise<{ globalSummary: string }> =
+  async () => ({ globalSummary: "" })
+let buildSystemPrompt: (ctx: Record<string, any>) => string =
+  (ctx) => `You are a Luau/Roblox coding assistant.\n\nProject context:\n${(ctx as any).globalSummary ?? ""}`
+let buildDocsContext: (query: string, projectPath?: string) => Promise<string> =
+  async () => ""
+try { const m = require("../ai/context"); buildGlobalSummary = m.buildGlobalSummary; buildSystemPrompt = m.buildSystemPrompt; buildDocsContext = m.buildDocsContext } catch {}
+
+let analyzeTopology: (projectPath: string) => any = () => ({ scripts: [], remotes: [], edges: [] })
+try { analyzeTopology = require("../topology/analyzer").analyzeTopology } catch {}
+
+let analyzeCrossScript: (projectPath: string) => any = () => ({ scripts: [], remoteLinks: [] })
+try { analyzeCrossScript = require("../analysis/cross-script").analyzeCrossScript } catch {}
+
+let performanceLint: (projectPath: string) => any = () => []
+let performanceLintFile: (filePath: string, content: string) => any = () => []
+try { const m = require("../analysis/performance-lint"); performanceLint = m.performanceLint; performanceLintFile = m.performanceLintFile } catch {}
+
+interface DataStoreSchema { name: string; version: number; fields: unknown[] }
+let loadSchemas: (p: string) => any = () => ({ schemas: [] })
+let addSchema: (p: string, s: DataStoreSchema) => any = () => ({ success: true })
+let deleteSchema: (p: string, n: string) => any = () => ({ success: true })
+let generateDataModule: (s: DataStoreSchema) => any = () => ""
+let generateMigration: (o: DataStoreSchema, n: DataStoreSchema) => any = () => ""
+try { const m = require("../datastore/schema"); loadSchemas = m.loadSchemas; addSchema = m.addSchema; deleteSchema = m.deleteSchema; generateDataModule = m.generateDataModule; generateMigration = m.generateMigration } catch {}
+
+let getConsoleOutput: () => any = async () => null
+let isStudioConnected: () => any = () => false
+try { const m = require("../mcp/client"); getConsoleOutput = m.getConsoleOutput; isStudioConnected = m.isStudioConnected } catch {}
+
+let getBridgeTree: () => any = () => null
+let getBridgeLogs: () => any = () => []
+let isBridgeConnected: () => any = () => false
+let clearBridgeLogs: () => any = () => {}
+let queueScript: (code: string) => any = () => ""
+let getCommandResult: (id: string) => any = () => null
+try { const m = require("../bridge/server"); getBridgeTree = m.getBridgeTree; getBridgeLogs = m.getBridgeLogs; isBridgeConnected = m.isBridgeConnected; clearBridgeLogs = m.clearBridgeLogs; queueScript = m.queueScript; getCommandResult = m.getCommandResult } catch {}
+
+let telemetryEnabled: () => boolean = () => false
+let setTelemetry: (enabled: boolean) => void = () => {}
+let telemetryStats: () => any = () => null
+let recordDiff: (entry: any) => void = () => {}
+let recordQuery: (entry: any) => void = () => {}
+try { const m = require("../telemetry/collector"); telemetryEnabled = m.isEnabled; setTelemetry = m.setEnabled; telemetryStats = m.getStats; recordDiff = m.recordDiff; recordQuery = m.recordQuery } catch {}
+
+/* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 
 // Track AI-generated file contents for telemetry diff comparison
 const aiGeneratedFiles = new Map<string, string>()
@@ -328,10 +366,10 @@ export function registerIpcHandlers(): void {
           const childCount = tree.children?.length ?? 0
           lines.push(`DataModel root: ${tree.name} [${tree.class}] with ${childCount} top-level services.`)
         }
-        const recentErrors = logs.filter((l) => l.kind === "error").slice(-5)
+        const recentErrors = (logs as Array<{ kind: string; text: string }>).filter((l) => l.kind === "error").slice(-5)
         if (recentErrors.length > 0) {
           lines.push("Recent Studio errors:")
-          recentErrors.forEach((e) => lines.push(`  [ERROR] ${e.text}`))
+          recentErrors.forEach((e: { text: string }) => lines.push(`  [ERROR] ${e.text}`))
         }
         lines.push(
           "You can use read_instance_tree, get_runtime_logs, run_studio_script, and set_property tools to interact with the live Studio session."
