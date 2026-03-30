@@ -8,7 +8,7 @@
     "url": "https://github.com/ltfupb/luano.git"
   },
   "author": "ltfupb",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -66,6 +66,7 @@
     "appId": "io.luano.app",
     "productName": "Luano",
     "copyright": "Copyright © 2026 Luano",
+    "artifactName": "Luano-${version}-${os}-${arch}.${ext}",
     "asar": true,
     "asarUnpack": [
       "node_modules/better-sqlite3/**",

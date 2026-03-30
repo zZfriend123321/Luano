@@ -251,6 +251,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
   const [visible, setVisible] = useState(false)
   const [customSkills, setCustomSkills] = useState<CustomSkill[]>([])
   const [editingSkill, setEditingSkill] = useState<{ index: number; skill: CustomSkill } | null>(null)
+  const [telemetryEnabled, setTelemetryEnabled] = useState(false)
+  const [proStatus, setProStatus] = useState<{ isPro: boolean } | null>(null)
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true))
@@ -267,6 +269,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
         setCustomSkills((raw ?? []) as CustomSkill[])
       }).catch(() => {})
     }
+
+    // Load telemetry and pro status
+    window.api.telemetryIsEnabled().then((v: boolean) => setTelemetryEnabled(v)).catch(() => {})
+    window.api.getProStatus().then((s: { isPro: boolean }) => setProStatus(s)).catch(() => {})
   }, [])
 
   const handleClose = () => {
@@ -549,6 +555,54 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
                 No custom skills yet. Type / in chat to see built-in skills.
               </span>
             )}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: "1px", background: "var(--border-subtle)" }} />
+
+          {/* Telemetry */}
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Data</SectionLabel>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={telemetryEnabled}
+                onChange={async (e) => {
+                  const v = e.target.checked
+                  setTelemetryEnabled(v)
+                  await window.api.telemetrySetEnabled(v)
+                }}
+                className="accent-[var(--accent)]"
+                style={{ width: 14, height: 14 }}
+              />
+              <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+                Help improve Luano AI by collecting anonymous usage data
+              </span>
+            </label>
+            <span style={{ fontSize: "10px", color: "var(--text-ghost)", lineHeight: 1.4 }}>
+              Data is stored locally on your machine. Nothing is sent to any server.
+            </span>
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: "1px", background: "var(--border-subtle)" }} />
+
+          {/* Pro Status */}
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Plan</SectionLabel>
+            <div
+              className="flex items-center gap-2 rounded-lg px-3 py-2.5"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
+            >
+              <span style={{ fontSize: "12px", fontWeight: 600, color: proStatus?.isPro ? "#10b981" : "var(--text-secondary)" }}>
+                {proStatus?.isPro ? "Pro" : "Community (Free)"}
+              </span>
+              {!proStatus?.isPro && (
+                <span style={{ fontSize: "10px", color: "var(--text-ghost)", marginLeft: "auto" }}>
+                  Agent, Inline Edit, Studio Bridge require Pro
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

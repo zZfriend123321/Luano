@@ -25,14 +25,17 @@ Luano is a desktop editor built specifically for Roblox game development. It bun
 **AI Assistant**
 - Chat with AI that understands Roblox architecture, Luau patterns, and your project context
 - Three modes: **Ask** (Q&A), **Plan** (step-by-step), **Agent** (autonomous)
+- Agent mode with explore-first workflow and self-verification (lint after every edit)
 - Roblox API documentation RAG for accurate answers
-- Bring Your Own Key (Claude or OpenAI)
+- Works with both Claude and OpenAI (including Agent mode)
+- Bring Your Own Key
 
 **Developer Experience**
 - Built-in terminal
 - File explorer with Roblox script type indicators
 - Quick Open (Ctrl+P)
 - Project templates (Obby, Tycoon, etc.)
+- Roblox topology visualization (dependency graph + remote events)
 - Dark theme designed for long sessions
 
 ---
@@ -41,7 +44,11 @@ Luano is a desktop editor built specifically for Roblox game development. It bun
 
 ### Download
 
-Pre-built installers will be available on the [Releases](https://github.com/ltfupb/luano/releases) page.
+Pre-built installers are available on the [Releases](https://github.com/ltfupb/luano/releases) page.
+
+- **Windows**: `.exe` installer
+- **macOS**: `.dmg`
+- **Linux**: `.AppImage`
 
 ### Build from Source
 
@@ -70,21 +77,27 @@ Luano uses Bring Your Own Key (BYOK) for AI features:
 2. Enter your Claude API key (`sk-ant-...`) or OpenAI API key (`sk-proj-...`)
 3. Start chatting
 
+AI is optional — the editor, LSP, Rojo, Selene, and StyLua all work without an API key.
+
 ---
 
 ## Plans
 
-| | **Community (Free)** | **Pro (Coming Soon)** |
-|---|---|---|
-| Editor + LSP + Snippets | ✅ | ✅ |
-| Rojo, Selene, StyLua | ✅ | ✅ |
+|  | **Community (Free)** | **Pro** |
+| --- | --- | --- |
+| Monaco Editor + Luau LSP | ✅ | ✅ |
+| Rojo, Selene, StyLua bundled | ✅ | ✅ |
 | File explorer, Terminal | ✅ | ✅ |
-| AI Chat (BYOK) | ✅ | ✅ |
-| Inline AI Edit (BYOK) | ✅ | ✅ |
-| Managed AI (no key needed) | — | ✅ |
-| Agent & Plan modes | — | ✅ |
+| Project templates | ✅ | ✅ |
+| AI Chat (BYOK, Q&A) | ✅ | ✅ |
+| AI Agent mode (autonomous coding) | — | ✅ |
+| Inline AI Edit (Cmd+K) | — | ✅ |
 | Roblox Docs RAG | — | ✅ |
 | Studio Live Bridge | — | ✅ |
+| Cross-script analysis | — | ✅ |
+| Performance lint | — | ✅ |
+| DataStore schema generator | — | ✅ |
+| Managed AI (no key needed) | — | Coming Soon |
 
 The Community edition is fully open-source and free forever.
 
@@ -107,10 +120,12 @@ The Community edition is fully open-source and free forever.
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-By submitting a pull request, you agree that your contribution is licensed under the MIT License.
+By submitting a pull request, you agree that your contribution is licensed under the Apache License 2.0.
 
 ---
 
 ## License
 
-[MIT](LICENSE) — free for personal and commercial use.
+The Luano editor is open source under the [Apache 2.0 License](LICENSE).
+
+AI Agent, Studio Bridge, and other Pro features are available under a separate commercial license. See [luano.dev/pricing](https://luano.dev/pricing) for details.

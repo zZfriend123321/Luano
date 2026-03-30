@@ -9,6 +9,9 @@ export interface ToolEvent {
 }
 
 const api = {
+  // ── Pro 상태 ──────────────────────────────────────────────────────────────
+  getProStatus: () => ipcRenderer.invoke("pro:status"),
+
   // ── 프로젝트 ──────────────────────────────────────────────────────────────
   openFolder: () => ipcRenderer.invoke("project:open-folder"),
   openProject: (path: string) => ipcRenderer.invoke("project:open", path),
@@ -161,6 +164,11 @@ const api = {
     ipcRenderer.invoke("skills:load", projectPath),
   skillsSave: (projectPath: string, skills: unknown[]): Promise<{ success: boolean }> =>
     ipcRenderer.invoke("skills:save", projectPath, skills),
+
+  // ── Telemetry ──────────────────────────────────────────────────────────────
+  telemetryIsEnabled: () => ipcRenderer.invoke("telemetry:is-enabled"),
+  telemetrySetEnabled: (enabled: boolean) => ipcRenderer.invoke("telemetry:set-enabled", enabled),
+  telemetryStats: () => ipcRenderer.invoke("telemetry:stats"),
 
   // ── Error Explainer ───────────────────────────────────────────────────────
   explainError: (errorText: string, context: unknown): Promise<string> =>

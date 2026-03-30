@@ -423,12 +423,14 @@ export default function App(): JSX.Element {
               className="flex-shrink-0 flex flex-col overflow-hidden animate-slide-in-right"
               style={{ width: `${sidePanelWidth}px`, background: "var(--bg-panel)" }}
             >
-              {activePanel === "explorer" && <FileExplorer />}
-              {activePanel === "search" && <SearchPanel />}
-              {activePanel === "rojo" && <RojoPanel />}
-              {activePanel === "studio" && <StudioPanel />}
-              {activePanel === "analysis" && <CrossScriptPanel />}
-              {activePanel === "datastore" && <DataStorePanel />}
+              <ErrorBoundary>
+                {activePanel === "explorer" && <FileExplorer />}
+                {activePanel === "search" && <SearchPanel />}
+                {activePanel === "rojo" && <RojoPanel />}
+                {activePanel === "studio" && <StudioPanel />}
+                {activePanel === "analysis" && <CrossScriptPanel />}
+                {activePanel === "datastore" && <DataStorePanel />}
+              </ErrorBoundary>
             </div>
             <div
               onMouseDown={handleSideResizeMouseDown}

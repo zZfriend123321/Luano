@@ -96,9 +96,17 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
   const [skillIndex, setSkillIndex] = useState(0)
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [agentRound, setAgentRound] = useState(0)
+  const [proFeatures, setProFeatures] = useState<Record<string, boolean>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const t = useT()
+
+  // Load pro status
+  useEffect(() => {
+    window.api.getProStatus().then((s: { features: Record<string, boolean> }) => {
+      setProFeatures(s.features ?? {})
+    }).catch(() => {})
+  }, [])
 
   // Load custom skills from project
   useEffect(() => {
@@ -272,10 +280,17 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
     if (planMode) {
       await doSendChat(apiMessages)
+    } else if (proFeatures.agent === false) {
+      // Agent mode requires Pro — fall back to basic chat with a notice
+      addMessage({
+        role: "assistant",
+        content: "Agent mode requires **Luano Pro**. Switching to chat mode.\n\nUpgrade at [luano.dev/pricing](https://luano.dev/pricing) for autonomous coding, inline edit, Studio bridge, and more."
+      })
+      await doSendChat(apiMessages)
     } else {
       await executeAgent(apiMessages)
     }
-  }, [input, isStreaming, planMode, addMessage, doSendChat, executeAgent])
+  }, [input, isStreaming, planMode, proFeatures, addMessage, doSendChat, executeAgent])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Skills autocomplete navigation

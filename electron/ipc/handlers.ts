@@ -26,6 +26,18 @@ import {
   getBridgeTree, getBridgeLogs, isBridgeConnected,
   clearBridgeLogs, queueScript, getCommandResult
 } from "../bridge/server"
+import { isPro, hasFeature, type ProFeature } from "../pro"
+import { isEnabled as telemetryEnabled, setEnabled as setTelemetry, getStats as telemetryStats, recordDiff, recordQuery } from "../telemetry/collector"
+
+// Track AI-generated file contents for telemetry diff comparison
+const aiGeneratedFiles = new Map<string, string>()
+
+const PRO_REQUIRED = (feature: ProFeature) => ({
+  success: false,
+  error: "pro_required",
+  feature,
+  message: `This feature requires Luano Pro. Upgrade at luano.dev/pricing`
+})
 
 // ── Terminal (node-pty) ────────────────────────────────────────────────────────
 interface PtyEntry {
@@ -61,6 +73,21 @@ function spawnPty(id: string, sender: WebContents, cwd?: string): void {
 }
 
 export function registerIpcHandlers(): void {
+  // ── Pro 상태 ──────────────────────────────────────────────────────────────
+  ipcMain.handle("pro:status", () => ({
+    isPro: isPro(),
+    features: {
+      agent: hasFeature("agent"),
+      inlineEdit: hasFeature("inline-edit"),
+      rag: hasFeature("rag"),
+      studioBridge: hasFeature("studio-bridge"),
+      crossScript: hasFeature("cross-script"),
+      perfLint: hasFeature("perf-lint"),
+      datastoreSchema: hasFeature("datastore-schema"),
+      skills: hasFeature("skills")
+    }
+  }))
+
   // ── 프로젝트 ──────────────────────────────────────────────────────────────
   ipcMain.handle("project:open-folder", async () => {
     const result = await dialog.showOpenDialog({ properties: ["openDirectory"] })
@@ -78,6 +105,23 @@ export function registerIpcHandlers(): void {
   // ── 파일 ──────────────────────────────────────────────────────────────────
   ipcMain.handle("file:read", (_, filePath: string) => readFile(filePath))
   ipcMain.handle("file:write", (_, filePath: string, content: string) => {
+    // Telemetry: if this file was AI-generated, record the diff
+    const aiContent = aiGeneratedFiles.get(filePath)
+    if (aiContent && content !== aiContent) {
+      const ext = filePath.split(".").pop() ?? ""
+      const fileType = filePath.includes(".server.") ? "server"
+        : filePath.includes(".client.") ? "client" : "module"
+      recordDiff({
+        aiGenerated: aiContent,
+        userEdited: content,
+        fileType,
+        apisUsed: [],
+        lintErrorsBefore: 0,
+        lintErrorsAfter: 0,
+        accepted: true
+      })
+      aiGeneratedFiles.delete(filePath)
+    }
     writeFile(filePath, content)
     return { success: true }
   })
@@ -210,6 +254,8 @@ export function registerIpcHandlers(): void {
       })
 
       await chatStream(messages as never, systemPrompt, streamChannel)
+      const userQuery = lastMsg?.content ?? ""
+      recordQuery({ userQuery, apisReferenced: [], ragHit: !!docsContext })
       return { success: true }
     }
   )
@@ -233,7 +279,7 @@ export function registerIpcHandlers(): void {
     return planChat(messages as never, systemPrompt)
   })
 
-  // ── Inline Edit (Cmd+K) ───────────────────────────────────────────────────
+  // ── Inline Edit (Cmd+K) [Pro] ──────────────────────────────────────────────
   ipcMain.handle(
     "ai:inline-edit",
     async (
@@ -243,6 +289,7 @@ export function registerIpcHandlers(): void {
       instruction: string,
       contextData: unknown
     ) => {
+      if (!hasFeature("inline-edit")) return PRO_REQUIRED("inline-edit")
       const ctx = contextData as { globalSummary: string; currentFile?: string }
       const systemPrompt = buildSystemPrompt({
         globalSummary: ctx.globalSummary ?? "",
@@ -255,10 +302,11 @@ export function registerIpcHandlers(): void {
   // ── Agent Abort ────────────────────────────────────────────────────────────
   ipcMain.on("ai:abort", () => { abortAgent() })
 
-  // ── Agent Chat (Tool Use) ─────────────────────────────────────────────────
+  // ── Agent Chat (Tool Use) [Pro] ────────────────────────────────────────────
   ipcMain.handle(
     "ai:agent-chat",
     async (_, messages: unknown[], contextData: unknown, streamChannel: string) => {
+      if (!hasFeature("agent")) return PRO_REQUIRED("agent")
       const ctx = contextData as {
         globalSummary: string
         currentFile?: string
@@ -301,29 +349,57 @@ export function registerIpcHandlers(): void {
       })
 
       const result = await agentChat(messages as never, systemPrompt, streamChannel)
+      recordQuery({ userQuery: lastMsg?.content ?? "", apisReferenced: [], ragHit: !!docsContext })
+
+      // Track AI-modified files for telemetry diff comparison
+      for (const fp of result.modifiedFiles) {
+        try {
+          const content = readFileSync(fp, "utf-8")
+          aiGeneratedFiles.set(fp, content)
+        } catch { /* skip unreadable */ }
+      }
+
       return result
     }
   )
 
-  // ── Studio Bridge (legacy MCP) ────────────────────────────────────────────
+  // ── Studio Bridge (legacy MCP) [Pro] ───────────────────────────────────────
   ipcMain.handle("studio:get-console", async () => {
+    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     return getConsoleOutput()
   })
 
   ipcMain.handle("studio:is-connected", async () => {
+    if (!hasFeature("studio-bridge")) return false
     return isStudioConnected()
   })
 
-  // ── Live Bridge ───────────────────────────────────────────────────────────
-  ipcMain.handle("bridge:get-tree", () => getBridgeTree())
-  ipcMain.handle("bridge:get-logs", () => getBridgeLogs())
-  ipcMain.handle("bridge:is-connected", () => isBridgeConnected())
-  ipcMain.handle("bridge:clear-logs", () => { clearBridgeLogs(); return { success: true } })
+  // ── Live Bridge [Pro] ─────────────────────────────────────────────────────
+  ipcMain.handle("bridge:get-tree", () => {
+    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
+    return getBridgeTree()
+  })
+  ipcMain.handle("bridge:get-logs", () => {
+    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
+    return getBridgeLogs()
+  })
+  ipcMain.handle("bridge:is-connected", () => {
+    if (!hasFeature("studio-bridge")) return false
+    return isBridgeConnected()
+  })
+  ipcMain.handle("bridge:clear-logs", () => {
+    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
+    clearBridgeLogs(); return { success: true }
+  })
   ipcMain.handle("bridge:run-script", (_, code: string) => {
+    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     const id = queueScript(code)
     return { id }
   })
-  ipcMain.handle("bridge:get-command-result", (_, id: string) => getCommandResult(id))
+  ipcMain.handle("bridge:get-command-result", (_, id: string) => {
+    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
+    return getCommandResult(id)
+  })
 
   ipcMain.handle("bridge:install-plugin", () => {
     try {
@@ -420,42 +496,51 @@ export function registerIpcHandlers(): void {
     return { success: true }
   })
 
-  // ── Cross-Script Analysis ──────────────────────────────────────────────────
+  // ── Cross-Script Analysis [Pro] ─────────────────────────────────────────────
   ipcMain.handle("analysis:cross-script", (_, projectPath: string) => {
+    if (!hasFeature("cross-script")) return PRO_REQUIRED("cross-script")
     return analyzeCrossScript(projectPath)
   })
 
   ipcMain.handle("analysis:perf-lint", (_, projectPath: string) => {
+    if (!hasFeature("perf-lint")) return PRO_REQUIRED("perf-lint")
     return performanceLint(projectPath)
   })
 
   ipcMain.handle("analysis:perf-lint-file", (_, filePath: string, content: string) => {
+    if (!hasFeature("perf-lint")) return PRO_REQUIRED("perf-lint")
     return performanceLintFile(filePath, content)
   })
 
-  // ── DataStore Schema ─────────────────────────────────────────────────────
+  // ── DataStore Schema [Pro] ────────────────────────────────────────────────
   ipcMain.handle("datastore:load-schemas", (_, projectPath: string) => {
+    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return loadSchemas(projectPath)
   })
 
   ipcMain.handle("datastore:save-schema", (_, projectPath: string, schema: DataStoreSchema) => {
+    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return addSchema(projectPath, schema)
   })
 
   ipcMain.handle("datastore:delete-schema", (_, projectPath: string, name: string) => {
+    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return deleteSchema(projectPath, name)
   })
 
   ipcMain.handle("datastore:generate-code", (_, schema: DataStoreSchema) => {
+    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return generateDataModule(schema)
   })
 
   ipcMain.handle("datastore:generate-migration", (_, oldSchema: DataStoreSchema, newSchema: DataStoreSchema) => {
+    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return generateMigration(oldSchema, newSchema)
   })
 
-  // ── Custom Skills (.luano/skills.json) ─────────────────────────────────
+  // ── Custom Skills [Pro] ────────────────────────────────────────────────────
   ipcMain.handle("skills:load", (_, projectPath: string) => {
+    if (!hasFeature("skills")) return PRO_REQUIRED("skills")
     const skillsPath = join(projectPath, ".luano", "skills.json")
     if (!existsSync(skillsPath)) return []
     try {
@@ -466,11 +551,20 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle("skills:save", (_, projectPath: string, skills: unknown[]) => {
+    if (!hasFeature("skills")) return PRO_REQUIRED("skills")
     const dir = join(projectPath, ".luano")
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, "skills.json"), JSON.stringify(skills, null, 2), "utf-8")
     return { success: true }
   })
+
+  // ── Telemetry ──────────────────────────────────────────────────────────────
+  ipcMain.handle("telemetry:is-enabled", () => telemetryEnabled())
+  ipcMain.handle("telemetry:set-enabled", (_, enabled: boolean) => {
+    setTelemetry(enabled)
+    return { success: true }
+  })
+  ipcMain.handle("telemetry:stats", () => telemetryStats())
 
   // ── Error Explainer ───────────────────────────────────────────────────────
   ipcMain.handle("ai:explain-error", async (_, errorText: string, contextData: unknown) => {

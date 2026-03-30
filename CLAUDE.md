@@ -43,19 +43,28 @@ luano/
 │   ├── lsp/
 │   │   ├── manager.ts           # luau-lsp 스폰 + WebSocket 브릿지
 │   │   └── bridge.ts            # stdio ↔ WebSocket 변환
+│   ├── pro/
+│   │   └── index.ts             # @luano/pro 인터페이스 (Free/Pro 분리)
 │   ├── ai/
-│   │   ├── provider.ts          # Claude/OpenAI API 추상화, 스트리밍
-│   │   ├── context.ts           # 3-레이어 컨텍스트 빌더
-│   │   ├── tools.ts             # AI 툴 정의
+│   │   ├── provider.ts          # Claude/OpenAI Agent loop (양쪽 tool use)
+│   │   ├── context.ts           # 3-레이어 컨텍스트 + topology/sourcemap 주입
+│   │   ├── tools.ts             # AI 도구 12개 (lint_file 포함)
 │   │   └── rag.ts               # FTS5 docs 검색
 │   ├── file/
 │   │   ├── project.ts           # 프로젝트 열기/생성
 │   │   └── watcher.ts           # chokidar 파일 감시 (300ms debounce)
 │   ├── ipc/
-│   │   └── handlers.ts          # ipcMain.handle() 100+ 등록
-│   ├── mcp/client.ts            # Studio MCP 클라이언트 (Phase 2+)
-│   ├── bridge/server.ts         # 실시간 Studio 브릿지 (Phase 4+)
-│   └── topology/analyzer.ts    # sourcemap.json 파싱
+│   │   └── handlers.ts          # ipcMain.handle() 등록, Pro feature gating
+│   ├── mcp/client.ts            # Studio MCP 클라이언트 (legacy)
+│   ├── bridge/server.ts         # Studio HTTP polling 브릿지
+│   ├── topology/analyzer.ts     # 의존성 그래프 + RemoteEvent 분석
+│   ├── analysis/
+│   │   ├── cross-script.ts      # 스크립트 간 참조 분석
+│   │   └── performance-lint.ts  # 성능 안티패턴 감지
+│   ├── datastore/
+│   │   └── schema.ts            # DataStore 스키마 생성/마이그레이션
+│   └── telemetry/
+│       └── collector.ts         # 로컬 SQLite 텔레메트리 (opt-in)
 │
 ├── src/                         # Renderer process (React)
 │   ├── App.tsx                  # 루트 레이아웃

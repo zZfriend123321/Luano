@@ -173,12 +173,14 @@ interface Window {
     // Cross-script analysis
     analyzeCrossScript: (projectPath: string) => Promise<unknown>
     perfLint: (projectPath: string) => Promise<unknown>
+    perfLintFile: (filePath: string, content: string) => Promise<unknown>
 
     // DataStore schema
     datastoreLoadSchemas: (projectPath: string) => Promise<unknown[]>
     datastoreSaveSchema: (projectPath: string, schema: unknown) => Promise<{ success: boolean }>
     datastoreDeleteSchema: (projectPath: string, name: string) => Promise<{ success: boolean }>
     datastoreGenerateCode: (schema: unknown) => Promise<string>
+    datastoreGenerateMigration: (oldSchema: unknown, newSchema: unknown) => Promise<string>
 
     // Custom Skills
     skillsLoad: (projectPath: string) => Promise<unknown[]>
@@ -186,6 +188,17 @@ interface Window {
 
     // Error Explainer
     explainError: (errorText: string, context: unknown) => Promise<string>
+
+    // Pro Status
+    getProStatus: () => Promise<{
+      isPro: boolean
+      features: Record<string, boolean>
+    }>
+
+    // Telemetry
+    telemetryIsEnabled: () => Promise<boolean>
+    telemetrySetEnabled: (enabled: boolean) => Promise<{ success: boolean }>
+    telemetryStats: () => Promise<{ diffs: number; queries: number; errorFixes: number } | null>
 
     // 이벤트
     on: (channel: string, callback: (...args: unknown[]) => void) => () => void
