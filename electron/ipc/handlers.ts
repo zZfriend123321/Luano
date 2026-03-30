@@ -17,55 +17,17 @@ import {
 } from "../ai/provider"
 import { isPro, hasFeature, type ProFeature } from "../pro"
 
-// ── Pro modules (dynamic — gracefully absent in Community edition) ───────────
-/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
-
-let buildGlobalSummary: (projectPath: string) => Promise<{ globalSummary: string }> =
-  async () => ({ globalSummary: "" })
-let buildSystemPrompt: (ctx: Record<string, any>) => string =
-  (ctx) => `You are a Luau/Roblox coding assistant.\n\nProject context:\n${(ctx as any).globalSummary ?? ""}`
-let buildDocsContext: (query: string, projectPath?: string) => Promise<string> =
-  async () => ""
-try { const m = require("../ai/context"); buildGlobalSummary = m.buildGlobalSummary; buildSystemPrompt = m.buildSystemPrompt; buildDocsContext = m.buildDocsContext } catch {}
-
-let analyzeTopology: (projectPath: string) => any = () => ({ scripts: [], remotes: [], edges: [] })
-try { analyzeTopology = require("../topology/analyzer").analyzeTopology } catch {}
-
-let analyzeCrossScript: (projectPath: string) => any = () => ({ scripts: [], remoteLinks: [] })
-try { analyzeCrossScript = require("../analysis/cross-script").analyzeCrossScript } catch {}
-
-let performanceLint: (projectPath: string) => any = () => []
-let performanceLintFile: (filePath: string, content: string) => any = () => []
-try { const m = require("../analysis/performance-lint"); performanceLint = m.performanceLint; performanceLintFile = m.performanceLintFile } catch {}
-
-interface DataStoreSchema { name: string; version: number; fields: unknown[] }
-let loadSchemas: (p: string) => any = () => ({ schemas: [] })
-let addSchema: (p: string, s: DataStoreSchema) => any = () => ({ success: true })
-let deleteSchema: (p: string, n: string) => any = () => ({ success: true })
-let generateDataModule: (s: DataStoreSchema) => any = () => ""
-let generateMigration: (o: DataStoreSchema, n: DataStoreSchema) => any = () => ""
-try { const m = require("../datastore/schema"); loadSchemas = m.loadSchemas; addSchema = m.addSchema; deleteSchema = m.deleteSchema; generateDataModule = m.generateDataModule; generateMigration = m.generateMigration } catch {}
-
-let getConsoleOutput: () => any = async () => null
-let isStudioConnected: () => any = () => false
-try { const m = require("../mcp/client"); getConsoleOutput = m.getConsoleOutput; isStudioConnected = m.isStudioConnected } catch {}
-
-let getBridgeTree: () => any = () => null
-let getBridgeLogs: () => any = () => []
-let isBridgeConnected: () => any = () => false
-let clearBridgeLogs: () => any = () => {}
-let queueScript: (code: string) => any = () => ""
-let getCommandResult: (id: string) => any = () => null
-try { const m = require("../bridge/server"); getBridgeTree = m.getBridgeTree; getBridgeLogs = m.getBridgeLogs; isBridgeConnected = m.isBridgeConnected; clearBridgeLogs = m.clearBridgeLogs; queueScript = m.queueScript; getCommandResult = m.getCommandResult } catch {}
-
-let telemetryEnabled: () => boolean = () => false
-let setTelemetry: (enabled: boolean) => void = () => {}
-let telemetryStats: () => any = () => null
-let recordDiff: (entry: any) => void = () => {}
-let recordQuery: (entry: any) => void = () => {}
-try { const m = require("../telemetry/collector"); telemetryEnabled = m.isEnabled; setTelemetry = m.setEnabled; telemetryStats = m.getStats; recordDiff = m.recordDiff; recordQuery = m.recordQuery } catch {}
-
-/* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
+// ── Pro modules (centralized loader — gracefully absent in Community edition) ─
+import {
+  buildGlobalSummary, buildSystemPrompt, buildDocsContext,
+  analyzeTopology, analyzeCrossScript,
+  performanceLint, performanceLintFile,
+  loadSchemas, addSchema, deleteSchema, generateDataModule, generateMigration,
+  getConsoleOutput, isStudioConnected,
+  getBridgeTree, getBridgeLogs, isBridgeConnected, clearBridgeLogs, queueScript, getCommandResult,
+  telemetryEnabled, setTelemetry, telemetryStats, recordDiff, recordQuery,
+  type DataStoreSchema
+} from "../pro/modules"
 
 // Track AI-generated file contents for telemetry diff comparison
 const aiGeneratedFiles = new Map<string, string>()
@@ -146,7 +108,6 @@ export function registerIpcHandlers(): void {
     // Telemetry: if this file was AI-generated, record the diff
     const aiContent = aiGeneratedFiles.get(filePath)
     if (aiContent && content !== aiContent) {
-      const ext = filePath.split(".").pop() ?? ""
       const fileType = filePath.includes(".server.") ? "server"
         : filePath.includes(".client.") ? "client" : "module"
       recordDiff({
@@ -281,7 +242,7 @@ export function registerIpcHandlers(): void {
       // RAG: 마지막 유저 메시지로 문서 검색
       const msgList = messages as Array<{ role: string; content: string }>
       const lastMsg = [...msgList].reverse().find((m) => m.role === "user")
-      const docsContext = lastMsg ? buildDocsContext(lastMsg.content) : ""
+      const docsContext = lastMsg ? await buildDocsContext(lastMsg.content) : ""
 
       const systemPrompt = buildSystemPrompt({
         globalSummary: ctx.globalSummary ?? "",
@@ -307,7 +268,7 @@ export function registerIpcHandlers(): void {
     }
     const msgList = messages as Array<{ role: string; content: string }>
     const lastMsg = [...msgList].reverse().find((m) => m.role === "user")
-    const docsContext = lastMsg ? buildDocsContext(lastMsg.content) : ""
+    const docsContext = lastMsg ? await buildDocsContext(lastMsg.content) : ""
     const systemPrompt = buildSystemPrompt({
       globalSummary: ctx.globalSummary ?? "",
       currentFile: ctx.currentFile,
@@ -354,7 +315,7 @@ export function registerIpcHandlers(): void {
 
       const msgList = messages as Array<{ role: string; content: string }>
       const lastMsg = [...msgList].reverse().find((m) => m.role === "user")
-      const docsContext = lastMsg ? buildDocsContext(lastMsg.content) : ""
+      const docsContext = lastMsg ? await buildDocsContext(lastMsg.content) : ""
 
       // Phase 4: include live Studio state when bridge is connected
       let bridgeContext: string | undefined

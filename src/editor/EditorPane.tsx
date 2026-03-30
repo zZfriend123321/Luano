@@ -7,20 +7,9 @@ import type * as Monaco from "monaco-editor"
 import { useProjectStore } from "../stores/projectStore"
 import { useSettingsStore } from "../stores/settingsStore"
 import { useIpcEvent } from "../hooks/useIpc"
-// Pro component (dynamic — absent in Community edition)
-import { lazy, Suspense, type ComponentType } from "react"
-
-const inlineEditModules = import.meta.glob<Record<string, ComponentType>>("../ai/InlineEditOverlay.tsx")
-const InlineEditOverlay: ComponentType<{
-  filePath: string; content: string; onAccept: (code: string) => void; onClose: () => void
-}> | null = (() => {
-  const loader = inlineEditModules["../ai/InlineEditOverlay.tsx"]
-  if (!loader) return null
-  const Lazy = lazy(() => loader().then(m => ({ default: m.InlineEditOverlay as ComponentType<any> })))
-  return ((props: any) => <Suspense fallback={null}><Lazy {...props} /></Suspense>) as any
-})()
 import { startLuauLanguageClient, stopLuauLanguageClient } from "./LuauLanguageClient"
 import { registerLuauSnippets } from "./LuauSnippets"
+import { InlineEditOverlay } from "../lib/loadPro"
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 

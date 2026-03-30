@@ -1,16 +1,8 @@
-import { useState, lazy, Suspense, type ComponentType } from "react"
+import { useState } from "react"
 import { useProjectStore } from "../stores/projectStore"
-
-// Pro component (dynamic — absent in Community edition)
-const diffModules = import.meta.glob<Record<string, ComponentType>>("./DiffView.tsx")
-const DiffView: ComponentType<{ original: string; modified: string }> | null = (() => {
-  const loader = diffModules["./DiffView.tsx"]
-  if (!loader) return null
-  const Lazy = lazy(() => loader().then(m => ({ default: m.DiffView as ComponentType<any> })))
-  return ((props: any) => <Suspense fallback={null}><Lazy {...props} /></Suspense>) as any
-})()
 import { useAIStore } from "../stores/aiStore"
 import { useT } from "../i18n/useT"
+import { DiffView } from "../lib/loadPro"
 
 interface CodeBlockProps {
   code: string

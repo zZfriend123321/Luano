@@ -17,39 +17,8 @@ import { StatusBar } from "./components/StatusBar"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { ToastContainer, toast } from "./components/Toast"
 import { TutorialOverlay, shouldShowTutorial } from "./components/TutorialOverlay"
-
-// ── Pro panels (dynamic — absent in Community edition) ────────────────────────
-import { lazy, Suspense, type ComponentType, type FC } from "react"
-
-const proPanelModules = import.meta.glob<Record<string, ComponentType>>([
-  "./studio/StudioPanel.tsx",
-  "./analysis/CrossScriptPanel.tsx",
-  "./datastore/DataStorePanel.tsx",
-  "./topology/TopologyPanel.tsx",
-])
-
-function ProPlaceholder({ name }: { name: string }): JSX.Element {
-  return (
-    <div className="flex items-center justify-center h-full" style={{ color: "var(--text-muted)", fontSize: 12 }}>
-      {name} requires Luano Pro
-    </div>
-  )
-}
-
-function loadProPanel(path: string, exportName: string, fallback: string): FC {
-  const loader = proPanelModules[path]
-  if (!loader) return () => <ProPlaceholder name={fallback} />
-  const Lazy = lazy(() =>
-    loader().then(m => ({ default: (m[exportName] as ComponentType) ?? (() => <ProPlaceholder name={fallback} />) }))
-  )
-  return () => <Suspense fallback={null}><Lazy /></Suspense>
-}
-
-const StudioPanel = loadProPanel("./studio/StudioPanel.tsx", "StudioPanel", "Studio Bridge")
-const CrossScriptPanel = loadProPanel("./analysis/CrossScriptPanel.tsx", "CrossScriptPanel", "Analysis")
-const DataStorePanel = loadProPanel("./datastore/DataStorePanel.tsx", "DataStorePanel", "DataStore")
-const TopologyPanel = loadProPanel("./topology/TopologyPanel.tsx", "TopologyPanel", "Topology")
 import { useT } from "./i18n/useT"
+import { StudioPanel, CrossScriptPanel, DataStorePanel, TopologyPanel } from "./lib/loadPro"
 
 const TERMINAL_MIN = 80
 const TERMINAL_MAX = 600
