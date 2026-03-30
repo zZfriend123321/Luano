@@ -120,12 +120,14 @@ The Community edition is fully open-source and free forever.
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-By submitting a pull request, you agree that your contribution is licensed under the Apache License 2.0.
+By submitting a pull request, you agree that your contribution is licensed under the FSL-1.1-ALv2.
 
 ---
 
 ## License
 
-The Luano editor is open source under the [Apache 2.0 License](LICENSE).
+Luano is licensed under the [Functional Source License 1.1 (Apache 2.0 Future License)](LICENSE).
+
+After two years, each release automatically converts to Apache 2.0.
 
 AI Agent, Studio Bridge, and other Pro features are available under a separate commercial license. See [luano.dev/pricing](https://luano.dev/pricing) for details.

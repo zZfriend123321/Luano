@@ -8,7 +8,7 @@
     "url": "https://github.com/ltfupb/luano.git"
   },
   "author": "ltfupb",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
