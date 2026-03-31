@@ -108,6 +108,19 @@ async function downloadBinaries(platform: "win" | "mac" | "linux"): Promise<void
   // cleanup
   fs.rmSync(TMP, { recursive: true, force: true })
   console.log(`\n✅ ${platform} binaries ready in resources/binaries/${platform}/`)
+
+  // Download globalTypes.d.luau (shared across platforms, only once)
+  const typeDefsDir = path.join(ROOT, "resources", "type-defs")
+  const globalTypesPath = path.join(typeDefsDir, "globalTypes.d.luau")
+  const globalTypesSize = fs.existsSync(globalTypesPath) ? fs.statSync(globalTypesPath).size : 0
+  if (globalTypesSize < 1000) {
+    console.log(`  ↓ globalTypes.d.luau...`)
+    fs.mkdirSync(typeDefsDir, { recursive: true })
+    const url = `https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/main/scripts/globalTypes.d.luau`
+    curlDownload(url, globalTypesPath)
+    const size = fs.statSync(globalTypesPath).size
+    console.log(`    ✓ globalTypes.d.luau (${(size / 1024).toFixed(0)} KB)`)
+  }
 }
 
 // CLI usage: ts-node scripts/download-binaries.ts [win|mac|linux|all]
