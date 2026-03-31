@@ -347,6 +347,8 @@ gh run watch <RUN_ID> --repo ltfupb/Luano
 | Luano-0.X.0-mac-arm64.dmg | macOS Apple Silicon |
 | Luano-0.X.0-mac-x64.dmg | macOS Intel |
 | Luano-0.X.0-linux-x86_64.AppImage | Linux x64 |
+
+**Full Changelog**: https://github.com/ltfupb/Luano/compare/v0.이전...v0.X.0
 ```
 
 **규칙:**
