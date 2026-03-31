@@ -4,16 +4,14 @@ import { useProjectStore } from "../stores/projectStore"
 const statusDot: Record<string, string> = {
   stopped: "#3a5272",
   starting: "#f59e0b",
-  listening: "#10b981",
-  serving: "#10b981",
+  running: "#10b981",
   error: "#e11d48"
 }
 
 const statusLabel: Record<string, string> = {
   stopped: "Rojo stopped",
   starting: "Rojo starting…",
-  listening: "Rojo ready",
-  serving: "Rojo syncing",
+  running: "Rojo serving",
   error: "Rojo error"
 }
 
@@ -36,7 +34,7 @@ export function StatusBar(): JSX.Element {
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{
             background: statusDot[status] ?? statusDot.stopped,
-            boxShadow: status === "serving" ? "0 0 4px #10b981" : (status === "listening" ? "0 0 3px #10b981" : "none")
+            boxShadow: status === "connected" ? "0 0 4px #10b981" : "none"
           }}
         />
         <span style={{ color: "var(--text-muted)" }}>{statusLabel[status] ?? status}</span>

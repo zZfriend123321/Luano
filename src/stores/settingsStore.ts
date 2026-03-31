@@ -3,6 +3,12 @@ import { persist, createJSONStorage } from "zustand/middleware"
 
 export type AppTheme = "dark" | "tokyo-night"
 
+export interface RecentProject {
+  path: string
+  name: string
+  openedAt: number
+}
+
 interface SettingsStore {
   language: string
   theme: AppTheme
@@ -10,29 +16,41 @@ interface SettingsStore {
   openaiKey: string
   provider: string
   model: string
+  recentProjects: RecentProject[]
   setLanguage: (lang: string) => void
   setTheme: (theme: AppTheme) => void
   setApiKey: (key: string) => void
   setOpenAIKey: (key: string) => void
   setProvider: (provider: string) => void
   setModel: (model: string) => void
+  addRecentProject: (path: string) => void
+  removeRecentProject: (path: string) => void
 }
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       language: "en",
       theme: "tokyo-night" as AppTheme,
       apiKey: "",
       openaiKey: "",
       provider: "anthropic",
       model: "claude-sonnet-4-6",
+      recentProjects: [],
       setLanguage: (language) => set({ language }),
       setTheme: (theme) => set({ theme }),
       setApiKey: (apiKey) => set({ apiKey }),
       setOpenAIKey: (openaiKey) => set({ openaiKey }),
       setProvider: (provider) => set({ provider }),
-      setModel: (model) => set({ model })
+      setModel: (model) => set({ model }),
+      addRecentProject: (path) => {
+        const name = path.split(/[/\\]/).pop() ?? path
+        const existing = get().recentProjects.filter((p) => p.path !== path)
+        set({ recentProjects: [{ path, name, openedAt: Date.now() }, ...existing].slice(0, 10) })
+      },
+      removeRecentProject: (path) => {
+        set({ recentProjects: get().recentProjects.filter((p) => p.path !== path) })
+      }
     }),
     {
       name: "luano-settings",
@@ -43,7 +61,8 @@ export const useSettingsStore = create<SettingsStore>()(
         apiKey: state.apiKey,
         openaiKey: state.openaiKey,
         provider: state.provider,
-        model: state.model
+        model: state.model,
+        recentProjects: state.recentProjects
       })
     }
   )

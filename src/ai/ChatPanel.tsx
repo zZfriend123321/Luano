@@ -96,6 +96,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
   const [skillIndex, setSkillIndex] = useState(0)
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [agentRound, setAgentRound] = useState(0)
+  const [checkpointFiles, setCheckpointFiles] = useState<string[]>([])
   const [proFeatures, setProFeatures] = useState<Record<string, boolean>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -124,6 +125,23 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
     const d = data as { connected?: boolean }
     if (typeof d.connected === "boolean") setBridgeConnected(d.connected)
   })
+
+  // Listen for checkpoint availability after agent completes
+  useEffect(() => {
+    if (typeof window.api.onCheckpointAvailable !== "function") return
+    return window.api.onCheckpointAvailable((info) => {
+      setCheckpointFiles(info.files)
+    })
+  }, [])
+
+  const handleRevert = useCallback(async () => {
+    if (typeof window.api.aiRevert !== "function") return
+    const res = await window.api.aiRevert()
+    if (res.success && res.reverted) {
+      addMessage({ role: "assistant", content: `Reverted ${res.reverted.length} file(s).` })
+      setCheckpointFiles([])
+    }
+  }, [addMessage])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -372,6 +390,23 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
           </span>
         )}
 
+        {/* Revert button — shown when checkpoint is available */}
+        {!isStreaming && checkpointFiles.length > 0 && (
+          <button
+            onClick={handleRevert}
+            title={`Revert ${checkpointFiles.length} file(s) changed by AI`}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all duration-100"
+            style={{
+              fontSize: "10px",
+              color: "#f87171",
+              background: "rgba(248,113,113,0.1)",
+              border: "1px solid rgba(248,113,113,0.3)"
+            }}
+          >
+            Revert ({checkpointFiles.length})
+          </button>
+        )}
+
         {/* Plan mode toggle */}
         <button
           onClick={() => setPlanMode(!planMode)}
@@ -434,7 +469,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
                 Ask anything or request code edits
               </p>
               <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)" }}>
-                Type <span style={{ color: "var(--accent)", fontFamily: "monospace" }}>/</span> for skills
+                Use Agent mode for file edits
               </p>
             </div>
           </div>
@@ -547,7 +582,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             placeholder={
               planMode
                 ? "Describe what to build \u2014 AI analyzes without modifying..."
-                : "Ask anything or request code edits... (type / for skills)"
+                : "Ask anything or request code edits..."
             }
             rows={2}
             disabled={blocked || !projectPath}

@@ -80,26 +80,7 @@ export const getConsoleOutput = mcp?.getConsoleOutput ?? (async () => null)
 export const isStudioConnected = mcp?.isStudioConnected ?? (() => false)
 
 // ── Bridge Server ───────────────────────────────────────────────────────────
-
-const bridge = tryRequire<{
-  startBridgeServer: () => void
-  setBridgeWindow: (w: any) => void
-  getBridgeTree: () => any
-  getBridgeLogs: () => any
-  isBridgeConnected: () => any
-  clearBridgeLogs: () => void
-  queueScript: (code: string) => string
-  getCommandResult: (id: string) => any
-}>("../bridge/server")
-
-export const startBridgeServer = bridge?.startBridgeServer ?? (() => {})
-export const setBridgeWindow = bridge?.setBridgeWindow ?? (() => {})
-export const getBridgeTree = bridge?.getBridgeTree ?? (() => null)
-export const getBridgeLogs = bridge?.getBridgeLogs ?? ((): any[] => [])
-export const isBridgeConnected = bridge?.isBridgeConnected ?? (() => false)
-export const clearBridgeLogs = bridge?.clearBridgeLogs ?? (() => {})
-export const queueScript = bridge?.queueScript ?? (() => "")
-export const getCommandResult = bridge?.getCommandResult ?? (() => null)
+// Bridge is now imported directly (free feature), see electron/bridge/server.ts
 
 // ── Telemetry ───────────────────────────────────────────────────────────────
 

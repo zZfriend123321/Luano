@@ -1,10 +1,10 @@
-import { ChildProcess, exec } from "child_process"
+import { ChildProcess } from "child_process"
 import { existsSync } from "fs"
 import { join } from "path"
 import { spawnSidecar } from "./index"
 import { BrowserWindow } from "electron"
 
-export type RojoStatus = "stopped" | "starting" | "listening" | "serving" | "error"
+export type RojoStatus = "stopped" | "starting" | "running" | "error"
 
 export class RojoManager {
   private proc: ChildProcess | null = null
@@ -12,8 +12,6 @@ export class RojoManager {
   private status: RojoStatus = "stopped"
   private projectPath: string | null = null
   private restartCount = 0
-  private connectionTimer: ReturnType<typeof setInterval> | null = null
-  private rojoPort: number | null = null
 
   serve(projectPath: string): void {
     this.stop()
@@ -35,16 +33,8 @@ export class RojoManager {
         cwd: projectPath,
         onData: (data) => {
           this.restartCount = 0
-          if (this.status !== "listening" && this.status !== "serving") {
-            this.status = "listening"
-          }
-          // Rojo 출력에서 포트 파싱 → TCP 연결 감시 시작
-          if (!this.rojoPort) {
-            const m = data.match(/(?:port|localhost:|address.*:)\s*(\d{4,5})/i)
-            if (m) {
-              this.rojoPort = parseInt(m[1], 10)
-              this.startConnectionCheck()
-            }
+          if (this.status !== "running") {
+            this.status = "running"
           }
           this.notifyStatus()
           this.notifyLog(data)
@@ -58,11 +48,9 @@ export class RojoManager {
       this.proc = sidecar.process
 
       this.proc.on("exit", (code) => {
-        // this.proc이 null이면 stop()이 의도적으로 호출된 것 — 무시
         if (this.proc === null) return
         this.status = code === 0 ? "stopped" : "error"
         this.notifyStatus()
-        // 비정상 종료 시 최대 3번까지 재시작
         if (code !== 0 && code !== null && this.projectPath && this.restartCount < 3) {
           this.restartCount++
           setTimeout(() => this.serve(this.projectPath!), 2000)
@@ -82,44 +70,6 @@ export class RojoManager {
     }
   }
 
-  /** Rojo 포트에 ESTABLISHED TCP 연결이 있는지 확인 → Studio 연결 감지 */
-  private startConnectionCheck(): void {
-    if (this.connectionTimer || !this.rojoPort) return
-    // 즉시 한 번 체크 + 5초 간격 반복
-    this.checkTcpConnections()
-    this.connectionTimer = setInterval(() => this.checkTcpConnections(), 5000)
-  }
-
-  private checkTcpConnections(): void {
-    if (!this.rojoPort || (this.status !== "listening" && this.status !== "serving")) {
-      this.stopConnectionCheck()
-      return
-    }
-    const port = this.rojoPort
-    const cmd =
-      process.platform === "win32"
-        ? `netstat -an -p TCP | findstr ":${port}" | findstr "ESTABLISHED"`
-        : `netstat -an 2>/dev/null | grep ":${port}" | grep "ESTABLISHED"`
-
-    exec(cmd, { timeout: 3000 }, (_err, stdout) => {
-      if (this.status !== "listening" && this.status !== "serving") return
-      const hasConnection = stdout.trim().length > 0
-      const newStatus: RojoStatus = hasConnection ? "serving" : "listening"
-      if (newStatus !== this.status) {
-        this.status = newStatus
-        this.notifyStatus()
-      }
-    })
-  }
-
-  private stopConnectionCheck(): void {
-    if (this.connectionTimer) {
-      clearInterval(this.connectionTimer)
-      this.connectionTimer = null
-    }
-    this.rojoPort = null
-  }
-
   private startSourcemapWatch(projectPath: string): void {
     if (this.sourcemapProc) return
 
@@ -130,8 +80,6 @@ export class RojoManager {
   }
 
   stop(): void {
-    this.stopConnectionCheck()
-    // null로 먼저 해제해서 exit 이벤트 핸들러가 재시작/error 처리 안 하도록
     const proc = this.proc
     const sourcemapProc = this.sourcemapProc
     this.proc = null

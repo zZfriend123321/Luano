@@ -68,6 +68,7 @@ src/analysis/
 src/datastore/
 src/topology/
 resources/roblox-docs/roblox_docs.db
+resources/roblox-docs/api-dump.json
 
 # Temp files
 tsc_*.txt

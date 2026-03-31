@@ -1,8 +1,7 @@
 import { ChildProcess } from "child_process"
-import { spawnSidecar } from "../sidecar/index"
+import { spawnSidecar, getResourcePath } from "../sidecar/index"
 import { LspBridge } from "./bridge"
 import { join } from "path"
-import { is } from "@electron-toolkit/utils"
 
 export class LspManager {
   private proc: ChildProcess | null = null
@@ -14,9 +13,7 @@ export class LspManager {
     await this.stop()
     this.projectPath = projectPath
 
-    const typeDefsPath = is.dev
-      ? join(__dirname, "../../resources/type-defs/globalTypes.d.luau")
-      : join(process.resourcesPath, "type-defs/globalTypes.d.luau")
+    const typeDefsPath = getResourcePath("type-defs", "globalTypes.d.luau")
 
     const sourcemapPath = join(projectPath, "sourcemap.json")
 

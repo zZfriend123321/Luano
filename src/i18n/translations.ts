@@ -69,6 +69,15 @@ export const translations = {
 
     // WelcomeScreen
     welcome: "Welcome to Luano",
+    welcomeSub: "AI-powered Roblox game development",
+    welcomeNewGame: "Create New Game",
+    welcomeNewGameDesc: "Start a fresh Rojo project with a ready-to-use template",
+    welcomeOpenProject: "Open Existing Project",
+    welcomeOpenProjectDesc: "Open a folder that already has a default.project.json (Rojo)",
+    welcomeRecentProjects: "Recent Projects",
+    welcomeNoRecent: "No recent projects",
+    welcomeTipTitle: "New to Rojo?",
+    welcomeTipBody: "Luano uses Rojo to sync code files with Roblox Studio. If you've been building directly in Studio, choose \"Create New Game\" to start fresh, then move your scripts over.",
     openFolder: "Open Folder",
 
     // StatusBar
@@ -112,6 +121,10 @@ export const translations = {
     noProject: "No project open",
     noProjectHint: "Open an existing Rojo project or create a new one",
     newProject: "New Project",
+    rojoSetupTitle: "Set up as Rojo project?",
+    rojoSetupBody: "This folder doesn't have a default.project.json. Would you like to create a Rojo project structure? Your existing files won't be affected.",
+    rojoSetupConfirm: "Set Up",
+    rojoSetupCancel: "Open As-Is",
   },
   ko: {
     files: "파일",
@@ -174,6 +187,15 @@ export const translations = {
     openFile: "파일을 열어 편집하세요",
 
     welcome: "Luano에 오신 것을 환영합니다",
+    welcomeSub: "AI 기반 Roblox 게임 개발",
+    welcomeNewGame: "새 게임 만들기",
+    welcomeNewGameDesc: "바로 사용 가능한 템플릿으로 새 Rojo 프로젝트를 생성합니다",
+    welcomeOpenProject: "기존 프로젝트 열기",
+    welcomeOpenProjectDesc: "default.project.json이 있는 기존 Rojo 프로젝트 폴더를 엽니다",
+    welcomeRecentProjects: "최근 프로젝트",
+    welcomeNoRecent: "최근 프로젝트 없음",
+    welcomeTipTitle: "Rojo가 처음이신가요?",
+    welcomeTipBody: "Luano는 Rojo를 사용해 코드 파일을 Roblox Studio와 동기화합니다. Studio에서 직접 개발하셨다면 \"새 게임 만들기\"로 시작한 후 스크립트를 옮겨오세요.",
     openFolder: "폴더 열기",
 
     ready: "준비",
@@ -216,6 +238,10 @@ export const translations = {
     noProject: "열린 프로젝트 없음",
     noProjectHint: "기존 Rojo 프로젝트를 열거나 새로 생성하세요",
     newProject: "새 프로젝트",
+    rojoSetupTitle: "Rojo 프로젝트로 설정할까요?",
+    rojoSetupBody: "이 폴더에 default.project.json이 없습니다. Rojo 프로젝트 구조를 생성할까요? 기존 파일은 영향받지 않습니다.",
+    rojoSetupConfirm: "설정하기",
+    rojoSetupCancel: "그냥 열기",
   }
 } as const
 

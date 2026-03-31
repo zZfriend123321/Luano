@@ -17,7 +17,7 @@ import * as path from "path"
 import Database from "better-sqlite3"
 
 const API_DUMP_URL =
-  "https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/roblox/API-Dump.json"
+  "https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/roblox/Full-API-Dump.json"
 
 const OUT_DIR = path.join(__dirname, "../../../resources/roblox-docs")
 const DB_PATH = path.join(OUT_DIR, "roblox_docs.db")
@@ -121,10 +121,9 @@ async function main(): Promise<void> {
     insertFts.run(info.lastInsertRowid, clsTitle, content, url)
     count++
 
-    // 중요 멤버는 개별 항목으로도 인덱싱
+    // 모든 멤버 개별 인덱싱 (Property 포함)
     for (const member of cls.Members) {
       if (member.Tags?.includes("Deprecated")) continue
-      if (member.MemberType === "Property") continue // 프로퍼티는 너무 많음
 
       const memberTitle = `${cls.Name}.${member.Name}`
       const memberContent = memberSignature(cls.Name, member)
@@ -133,6 +132,23 @@ async function main(): Promise<void> {
       count++
     }
   }
+
+  // Enum 인덱싱
+  if (dump.Enums) {
+    for (const e of dump.Enums) {
+      const items = e.Items.map((i) => `  ${e.Name}.${i.Name} = ${i.Value}`).join("\n")
+      const enumContent = `Enum: ${e.Name}\n\nItems:\n${items}`
+      const enumUrl = `https://create.roblox.com/docs/reference/engine/enums/${e.Name}`
+      const enumInfo = insert.run(e.Name, enumContent, enumUrl)
+      insertFts.run(enumInfo.lastInsertRowid, e.Name, enumContent, enumUrl)
+      count++
+    }
+  }
+
+  // Full-API-Dump.json을 resources에 복사 (런타임 AI 컨텍스트용)
+  const apiDumpDest = path.join(OUT_DIR, "api-dump.json")
+  fs.writeFileSync(apiDumpDest, raw, "utf-8")
+  console.log(`API dump saved → ${apiDumpDest}`)
 
   // 인덱스 재빌드
   db.exec("INSERT INTO docs_fts(docs_fts) VALUES ('rebuild')")

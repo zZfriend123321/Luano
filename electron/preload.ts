@@ -107,6 +107,17 @@ const api = {
   // ── Agent Abort ───────────────────────────────────────────────────────────
   aiAbort: (): void => { ipcRenderer.send("ai:abort") },
 
+  // ── Agent Revert (checkpoint rollback) ──────────────────────────────────
+  aiRevert: (): Promise<{ success: boolean; reverted?: string[] }> =>
+    ipcRenderer.invoke("agent:revert"),
+
+  // ── Agent Checkpoint listener ───────────────────────────────────────────
+  onCheckpointAvailable: (cb: (info: { fileCount: number; files: string[] }) => void): (() => void) => {
+    const handler = (_: unknown, info: { fileCount: number; files: string[] }) => cb(info)
+    ipcRenderer.on("agent:checkpoint-available", handler)
+    return () => ipcRenderer.removeListener("agent:checkpoint-available", handler)
+  },
+
   // ── Studio Bridge (legacy MCP) ────────────────────────────────────────────
   studioGetConsole: (): Promise<string | null> =>
     ipcRenderer.invoke("studio:get-console"),

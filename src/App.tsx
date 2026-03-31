@@ -40,47 +40,109 @@ function IconChat(): JSX.Element {
   )
 }
 
-function EmptyEditor({
+function WelcomeScreen({
   onOpenFolder,
-  onNewProject
+  onNewProject,
+  onOpenRecent
 }: {
   onOpenFolder: () => void
   onNewProject: () => void
+  onOpenRecent: (path: string) => void
 }): JSX.Element {
   const t = useT()
+  const recentProjects = useSettingsStore((s) => s.recentProjects)
+  const removeRecent = useSettingsStore((s) => s.removeRecentProject)
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-6 animate-fade-in">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{t("noProject")}</p>
-          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{t("noProjectHint")}</p>
-        </div>
+    <div className="flex-1 flex flex-col items-center justify-center animate-fade-in" style={{ gap: "32px" }}>
+      {/* Header */}
+      <div className="text-center" style={{ marginBottom: "8px" }}>
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{t("welcome")}</h1>
+        <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>{t("welcomeSub")}</p>
       </div>
-      <div className="flex gap-2">
+
+      {/* Action cards */}
+      <div className="flex gap-3" style={{ maxWidth: "520px", width: "100%", padding: "0 24px" }}>
+        {/* New Game */}
         <button
           onClick={onNewProject}
-          className="px-5 py-2 text-xs font-medium rounded-lg transition-all duration-150"
-          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLElement).style.color = "var(--text-primary)" }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)" }}
+          className="flex-1 flex flex-col items-start gap-2 rounded-lg p-4 transition-all duration-150 text-left"
+          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.background = "var(--bg-surface)" }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.background = "var(--bg-elevated)" }}
         >
-          {t("newProject")}
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{t("welcomeNewGame")}</span>
+          </div>
+          <span className="text-xs" style={{ color: "var(--text-muted)", lineHeight: "1.4" }}>{t("welcomeNewGameDesc")}</span>
         </button>
+
+        {/* Open Existing */}
         <button
           onClick={onOpenFolder}
-          className="px-5 py-2 text-xs font-medium rounded-lg transition-all duration-150"
-          style={{ background: "var(--accent)", color: "#1a1b26" }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--accent)"}
+          className="flex-1 flex flex-col items-start gap-2 rounded-lg p-4 transition-all duration-150 text-left"
+          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.background = "var(--bg-surface)" }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.background = "var(--bg-elevated)" }}
         >
-          {t("openFolder")}
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{t("welcomeOpenProject")}</span>
+          </div>
+          <span className="text-xs" style={{ color: "var(--text-muted)", lineHeight: "1.4" }}>{t("welcomeOpenProjectDesc")}</span>
         </button>
+      </div>
+
+      {/* Recent projects */}
+      <div style={{ maxWidth: "520px", width: "100%", padding: "0 24px" }}>
+        <p className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>{t("welcomeRecentProjects")}</p>
+        {recentProjects.length === 0 ? (
+          <p className="text-xs" style={{ color: "var(--text-muted)", opacity: 0.5 }}>{t("welcomeNoRecent")}</p>
+        ) : (
+          <div className="flex flex-col rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            {recentProjects.map((proj, i) => (
+              <div
+                key={proj.path}
+                className="flex items-center justify-between px-3 py-2 transition-colors duration-100 cursor-pointer"
+                style={{
+                  background: "var(--bg-elevated)",
+                  borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined
+                }}
+                onClick={() => onOpenRecent(proj.path)}
+                onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-surface)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "var(--bg-elevated)")}
+              >
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>{proj.name}</span>
+                  <span className="text-xs truncate" style={{ color: "var(--text-muted)", fontSize: "10px" }}>{proj.path}</span>
+                </div>
+                <button
+                  className="ml-2 flex-shrink-0 p-1 rounded transition-colors duration-100"
+                  style={{ color: "var(--text-muted)" }}
+                  onClick={(e) => { e.stopPropagation(); removeRecent(proj.path) }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--text-primary)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
+                  title="Remove"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tip */}
+      <div className="rounded-lg p-3" style={{ maxWidth: "520px", width: "100%", margin: "0 24px", background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}>
+        <p className="text-xs font-medium mb-1" style={{ color: "var(--accent)" }}>{t("welcomeTipTitle")}</p>
+        <p className="text-xs" style={{ color: "var(--text-muted)", lineHeight: "1.5" }}>{t("welcomeTipBody")}</p>
       </div>
     </div>
   )
@@ -91,6 +153,7 @@ export default function App(): JSX.Element {
   const { setStatus, addLog } = useRojoStore()
   const { setGlobalSummary, clearMessages } = useAIStore()
   const theme = useSettingsStore((s) => s.theme)
+  const addRecentProject = useSettingsStore((s) => s.addRecentProject)
   const t = useT()
 
   // Apply theme to document root
@@ -143,12 +206,13 @@ export default function App(): JSX.Element {
       ])
       setProject(path, tree as never, lspPort)
       setGlobalSummary(globalSummary)
+      addRecentProject(path)
       return true
     } catch (err) {
       console.error("[App] openProject failed:", err)
       return false
     }
-  }, [setProject, setGlobalSummary])
+  }, [setProject, setGlobalSummary, addRecentProject])
 
   // ── 세션 복원 — 앱 재시작 시 마지막 프로젝트 + 열린 파일 복원 ────────────
   useEffect(() => {
@@ -208,6 +272,7 @@ export default function App(): JSX.Element {
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
   const fileMenuRef = useRef<HTMLDivElement>(null)
   const [switchConfirm, setSwitchConfirm] = useState<{ action: "open" | "new" | "close"; path?: string } | null>(null)
+  const [rojoSetup, setRojoSetup] = useState<string | null>(null)
 
   // Close file menu on outside click
   useEffect(() => {
@@ -236,6 +301,16 @@ export default function App(): JSX.Element {
       setSwitchConfirm({ action: "open", path })
       return
     }
+    // Check if folder has default.project.json
+    let hasRojo = false
+    try {
+      await window.api.readFile(`${path}/default.project.json`)
+      hasRojo = true
+    } catch { /* no project file */ }
+    if (!hasRojo) {
+      setRojoSetup(path)
+      return
+    }
     await switchToProject(path, false)
   }
 
@@ -258,6 +333,23 @@ export default function App(): JSX.Element {
     closeProject()
     clearMessages()
     setGlobalSummary("")
+  }
+
+  const handleOpenRecent = async (path: string) => {
+    if (projectPath && dirtyFiles.length > 0) {
+      setSwitchConfirm({ action: "open", path })
+      return
+    }
+    let hasRojo = false
+    try {
+      await window.api.readFile(`${path}/default.project.json`)
+      hasRojo = true
+    } catch { /* no project file */ }
+    if (!hasRojo) {
+      setRojoSetup(path)
+      return
+    }
+    await switchToProject(path, false)
   }
 
   // ── 터미널 리사이즈 드래그 ───────────────────────────────────────────────────
@@ -453,7 +545,7 @@ export default function App(): JSX.Element {
               ) : projectPath ? (
                 <EditorPane />
               ) : (
-                <EmptyEditor onOpenFolder={handleOpenFolder} onNewProject={handleNewProject} />
+                <WelcomeScreen onOpenFolder={handleOpenFolder} onNewProject={handleNewProject} onOpenRecent={handleOpenRecent} />
               )}
             </ErrorBoundary>
           </div>
@@ -584,6 +676,62 @@ export default function App(): JSX.Element {
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rojo setup dialog */}
+      {rojoSetup && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in"
+          style={{ background: "rgba(5,8,15,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setRojoSetup(null) }}
+        >
+          <div
+            className="rounded-xl overflow-hidden animate-slide-up"
+            style={{
+              background: "var(--bg-panel)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.7)",
+              width: "400px"
+            }}
+          >
+            <div className="px-5 pt-5 pb-3">
+              <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                {t("rojoSetupTitle")}
+              </p>
+              <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
+                {t("rojoSetupBody")}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-4 pb-4 pt-1">
+              <button
+                onClick={async () => {
+                  const path = rojoSetup
+                  setRojoSetup(null)
+                  await switchToProject(path, true)
+                }}
+                className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
+                style={{ background: "var(--accent)", color: "white" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--accent)"}
+              >
+                {t("rojoSetupConfirm")}
+              </button>
+              <button
+                onClick={async () => {
+                  const path = rojoSetup
+                  setRojoSetup(null)
+                  await switchToProject(path, false)
+                }}
+                className="flex-1 py-1.5 rounded-lg text-xs transition-all duration-150"
+                style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-surface)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"}
+              >
+                {t("rojoSetupCancel")}
               </button>
             </div>
           </div>

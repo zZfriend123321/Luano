@@ -157,7 +157,12 @@ Monaco (renderer) ↔ WebSocket (port 6008) ↔ Node.js main ↔ luau-lsp stdio
 
 ### AI 시스템
 - `provider.ts`: 기본 채팅/스트리밍, Prompt Caching 유틸, 클라이언트 관리
-- `agent.ts`: Pro Agent loop (Anthropic + OpenAI 양쪽 tool use, MAX_ROUNDS 15)
+- `agent.ts`: Phase-based Agent loop (Claude Code subagent 패턴 참조)
+  - 3단계: EXPLORE (읽기 전용 도구) → EXECUTE (전체 도구) → VERIFY (자동 lint + 수정)
+  - EXPLORE: 코드 이해 후 전환 메시지 주입 → EXECUTE로 자동 전환
+  - VERIFY: 수정된 .lua/.luau 파일 자동 lint → 에러 시 최대 3라운드 자동 수정
+  - MAX_ROUNDS 15 + MAX_VERIFY_ROUNDS 3
+- `context.ts`: Scope Discipline 규칙 포함 — 요청 범위 밖 수정 방지 ("하지 마" 규칙)
 - Prompt Caching: `toCachedSystem()`이 시스템 프롬프트를 정적 규칙(캐시) + 동적 컨텍스트로 분리
 
 ### Pro 모듈 로딩

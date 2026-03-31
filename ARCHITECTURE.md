@@ -173,14 +173,24 @@ Monaco (renderer) ↔ WebSocket (port 6008) ↔ Node.js main ↔ luau-lsp stdio
 - `provider.ts`: 기본 채팅/스트리밍, Prompt Caching, 클라이언트 관리
 - `agent.ts`: Agent loop (Pro) — Anthropic + OpenAI 양쪽 tool use 지원
 
-**Agent Loop (Anthropic + OpenAI 양쪽 지원)**:
+**Phase-based Agent Loop (Claude Code subagent 패턴 참조)**:
+- 3단계 실행: EXPLORE → EXECUTE → VERIFY
+- EXPLORE: 읽기 전용 도구만 제공 (`read_file`, `list_files`, `grep_files`, `search_docs`, `read_instance_tree`, `get_runtime_logs`). 코드 이해 후 실행으로 전환
+- EXECUTE: 전체 도구. 파일 생성/수정/삭제 + lint 검증
+- VERIFY: 실행 완료 후 수정된 모든 .lua/.luau 파일 자동 lint → 에러 발견 시 자동 수정 (최대 3라운드)
+- 순수 질문(`?`, `뭐야`, `explain` 등)은 EXPLORE 건너뛰고 바로 EXECUTE
 - Anthropic: `messages.stream()` + `tool_use` stop reason
 - OpenAI: `chat.completions.create()` + function calling
-- 동일한 tool set, 동일한 MAX_ROUNDS (15), 동일한 abort/retry 로직
+- MAX_ROUNDS (15) + MAX_VERIFY_ROUNDS (3), 동일한 abort/retry 로직
 
-**Agent-First tool_choice**:
-- 기본: tool 사용 강제 (`any` / `required`)
-- 순수 질문(`?`, `뭐야`, `explain` 등)만 `auto`로 전환
+**Phase별 tool_choice**:
+- EXPLORE 첫 라운드: tool 사용 강제 (`any` / `required`)
+- EXECUTE 첫 라운드: tool 사용 강제 (질문 제외)
+- 이후 라운드: `auto`
+
+**Scope Discipline (Claude Code 참조)**:
+- 시스템 프롬프트에 "하지 마" 규칙 포함 — 요청 범위 밖 리팩토링/기능 추가/과잉 추상화 방지
+- 건드리지 않은 코드에 주석/타입 추가 금지, 불가능한 시나리오 에러 핸들링 금지
 
 **Prompt Caching (Anthropic)**:
 - `toCachedSystem()`: 시스템 프롬프트를 "PROJECT CONTEXT:" 마커 기준으로 분리
@@ -194,10 +204,10 @@ Monaco (renderer) ↔ WebSocket (port 6008) ↔ Node.js main ↔ luau-lsp stdio
 **AI Skills 10개** (`src/ai/skills.ts`):
 `/explain`, `/fix`, `/optimize`, `/refactor`, `/test`, `/type`, `/doc`, `/security`, `/convert`, `/scaffold`
 
-**Explore-first 워크플로우**:
-1. EXPLORE: `list_files`, `read_file`, `grep_files`로 프로젝트 이해
-2. ACT: `create_file`, `edit_file`로 수정
-3. VERIFY: `lint_file`로 검증 → 에러 시 자동 수정 루프
+**Phase 전환 흐름**:
+1. EXPLORE: `list_files`, `read_file`, `grep_files`로 프로젝트 이해 → `end_turn` 시 전환 메시지 주입
+2. EXECUTE: `create_file`, `edit_file`로 수정 → `end_turn` 시 자동 lint 검증
+3. VERIFY: lint 에러 발견 시 자동 수정 루프 (최대 3라운드)
 
 **3-레이어 컨텍스트**:
 1. Global Summary (~500 tokens): 프로젝트 구조 + 모듈 exports + topology 의존성 + sourcemap instance map

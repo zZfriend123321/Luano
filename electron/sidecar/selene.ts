@@ -1,3 +1,5 @@
+import { existsSync } from "fs"
+import { dirname, join } from "path"
 import { spawnSidecar } from "./index"
 
 export interface SelEneDiagnostic {
@@ -9,12 +11,26 @@ export interface SelEneDiagnostic {
   code: string
 }
 
+/** Walk up from startDir to find the directory containing selene.toml */
+function findSeleneRoot(startDir: string): string {
+  let dir = startDir
+  for (let i = 0; i < 20; i++) {
+    if (existsSync(join(dir, "selene.toml"))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return startDir
+}
+
 export async function lintFile(filePath: string, projectRoot?: string): Promise<SelEneDiagnostic[]> {
+  const cwd = findSeleneRoot(projectRoot ?? dirname(filePath))
+
   return new Promise((resolve) => {
     const output: string[] = []
 
     const sidecar = spawnSidecar("selene", ["--display-style=json2", filePath], {
-      cwd: projectRoot,
+      cwd,
       onData: (data) => output.push(data),
       onError: (data) => output.push(data)
     })

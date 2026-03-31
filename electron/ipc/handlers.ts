@@ -15,7 +15,14 @@ import {
   setProvider, setModel, getProviderAndModel,
   MODELS
 } from "../ai/provider"
+import { getLastCheckpoint, revertCheckpoint } from "../ai/agent"
 import { isPro, hasFeature, type ProFeature } from "../pro"
+
+// ── Bridge (always available — connection status is a free feature) ──────────
+import {
+  getBridgeTree, getBridgeLogs, isBridgeConnected, clearBridgeLogs,
+  queueScript, getCommandResult
+} from "../bridge/server"
 
 // ── Pro modules (centralized loader — gracefully absent in Community edition) ─
 import {
@@ -24,7 +31,6 @@ import {
   performanceLint, performanceLintFile,
   loadSchemas, addSchema, deleteSchema, generateDataModule, generateMigration,
   getConsoleOutput, isStudioConnected,
-  getBridgeTree, getBridgeLogs, isBridgeConnected, clearBridgeLogs, queueScript, getCommandResult,
   telemetryEnabled, setTelemetry, telemetryStats, recordDiff, recordQuery,
   type DataStoreSchema
 } from "../pro/modules"
@@ -84,7 +90,7 @@ export function registerIpcHandlers(): void {
       crossScript: hasFeature("cross-script"),
       perfLint: hasFeature("perf-lint"),
       datastoreSchema: hasFeature("datastore-schema"),
-      skills: hasFeature("skills")
+      skills: true
     }
   }))
 
@@ -358,9 +364,28 @@ export function registerIpcHandlers(): void {
         } catch { /* skip unreadable */ }
       }
 
+      // Notify renderer that a checkpoint is available for revert
+      if (result.modifiedFiles.length > 0) {
+        const { BrowserWindow: BW } = require("electron")
+        BW.getAllWindows().forEach((win: { webContents: WebContents }) => {
+          win.webContents.send("agent:checkpoint-available", {
+            fileCount: result.modifiedFiles.length,
+            files: result.modifiedFiles
+          })
+        })
+      }
+
       return result
     }
   )
+
+  // ── Agent Checkpoint Revert ──────────────────────────────────────────────
+  ipcMain.handle("agent:revert", async () => {
+    const checkpoint = getLastCheckpoint()
+    if (!checkpoint) return { success: false, message: "No checkpoint available" }
+    const reverted = revertCheckpoint(checkpoint)
+    return { success: true, reverted }
+  })
 
   // ── Studio Bridge (legacy MCP) [Pro] ───────────────────────────────────────
   ipcMain.handle("studio:get-console", async () => {
@@ -383,7 +408,6 @@ export function registerIpcHandlers(): void {
     return getBridgeLogs()
   })
   ipcMain.handle("bridge:is-connected", () => {
-    if (!hasFeature("studio-bridge")) return false
     return isBridgeConnected()
   })
   ipcMain.handle("bridge:clear-logs", () => {
@@ -537,9 +561,8 @@ export function registerIpcHandlers(): void {
     return generateMigration(oldSchema, newSchema)
   })
 
-  // ── Custom Skills [Pro] ────────────────────────────────────────────────────
+  // ── Custom Skills (Free) ────────────────────────────────────────────────────
   ipcMain.handle("skills:load", (_, projectPath: string) => {
-    if (!hasFeature("skills")) return PRO_REQUIRED("skills")
     const skillsPath = join(projectPath, ".luano", "skills.json")
     if (!existsSync(skillsPath)) return []
     try {
@@ -550,7 +573,6 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle("skills:save", (_, projectPath: string, skills: unknown[]) => {
-    if (!hasFeature("skills")) return PRO_REQUIRED("skills")
     const dir = join(projectPath, ".luano")
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, "skills.json"), JSON.stringify(skills, null, 2), "utf-8")

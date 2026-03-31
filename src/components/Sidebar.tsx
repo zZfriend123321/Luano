@@ -109,7 +109,7 @@ const panelIcons: Record<SidePanel, () => JSX.Element> = {
 export function Sidebar({ activePanel, onSelect, terminalOpen, onTerminalToggle }: SidebarProps): JSX.Element {
   const t = useT()
   const rojoStatus = useRojoStore((s) => s.status)
-  const rojoActive = rojoStatus === "serving" || rojoStatus === "listening" || rojoStatus === "starting"
+  const rojoActive = rojoStatus === "running" || rojoStatus === "starting"
 
   const labels: Record<SidePanel, string> = {
     explorer: t("files"),
