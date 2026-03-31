@@ -279,3 +279,77 @@ npx eslint "src/**/*.{ts,tsx}" "electron/**/*.ts" --max-warnings 20
 ```
 
 세 명령어 모두 통과해야 CI가 통과한다. **반드시 push 전에 실행할 것.**
+
+---
+
+## 릴리즈 절차 (정형화)
+
+> 매번 릴리즈할 때 실수 반복하지 않도록 정리한 표준 절차.
+
+### 1. 코드 준비
+
+```bash
+# 1) version bump (package.json)
+# 2) 변경사항 커밋
+git add -A && git commit -m "v0.X.0: 릴리즈 설명"
+```
+
+### 2. 로컬 검증 (필수)
+
+```bash
+npx tsc -p tsconfig.web.json --noEmit
+npx tsc -p tsconfig.node.json --noEmit
+npx eslint "src/**/*.{ts,tsx}" "electron/**/*.ts" --max-warnings 20
+```
+
+**세 개 다 통과해야 push 가능. 하나라도 실패하면 태그 걸지 말 것.**
+
+### 3. Push + 태그
+
+```bash
+git push origin main
+git tag v0.X.0
+git push origin v0.X.0
+```
+
+**순서 중요**: main push → CI 통과 확인 → 태그 push. 태그를 먼저 걸면 빌드가 CI 실패한 코드로 돌아감.
+
+### 4. 빌드 확인
+
+```bash
+gh run list --workflow=build.yml --limit 1 --repo ltfupb/Luano
+gh run watch <RUN_ID> --repo ltfupb/Luano
+```
+
+`build.yml`이 `v*` 태그 push에 자동 트리거. Win/Mac/Linux 3개 플랫폼 빌드 후 `softprops/action-gh-release`가 자동으로 GitHub Release 생성 + 바이너리 첨부.
+
+### 5. 릴리즈 설명 업데이트
+
+`build.yml`의 `generate_release_notes: true`는 커밋 로그 기반 자동 생성. 수동으로 보강:
+
+```bash
+gh release edit v0.X.0 --repo ltfupb/Luano --notes "$(cat <<'EOF'
+## 주요 변경사항
+- ...
+
+## 바이너리
+| 파일 | 플랫폼 |
+|------|--------|
+| Luano-0.X.0-win-x64.exe | Windows x64 |
+| Luano-0.X.0-mac-arm64.dmg | macOS Apple Silicon |
+| Luano-0.X.0-mac-x64.dmg | macOS Intel |
+| Luano-0.X.0-linux-x86_64.AppImage | Linux x64 |
+EOF
+)"
+```
+
+### 태그 재설정이 필요한 경우 (빌드 실패 등)
+
+```bash
+gh release delete v0.X.0 --repo ltfupb/Luano --yes  # 기존 릴리즈 삭제
+git tag -d v0.X.0                                     # 로컬 태그 삭제
+git push origin :refs/tags/v0.X.0                     # 원격 태그 삭제
+# 수정 후 다시 태그 + push
+git tag v0.X.0
+git push origin v0.X.0
+```
