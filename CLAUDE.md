@@ -205,9 +205,9 @@ Monaco (renderer) ↔ WebSocket (port 6008) ↔ Node.js main ↔ luau-lsp stdio
 | **Phase 1** | 에디터, LSP, Rojo, AI 채팅, 템플릿 | ✅ 완료 |
 | **Phase 2** | 인라인 편집, RAG docs, Studio 브릿지, 에러 설명, Agent 모드 | ✅ 완료 |
 | **Phase 3** | Free/Pro 분리, Studio 플러그인, 텔레메트리, 멀티 AI (OpenAI), Prompt Caching | ✅ 완료 |
-| **Phase 3.5** | AI 코드 품질 개선, Welcome 화면, Rojo 상태 단순화, Full API RAG | ✅ v0.4.0 |
-| **Phase 4** | Auto-save, Pro 라이센싱, Auto-update, AI Evaluator, Context handoff, 배치 도구 | ✅ v0.5.0 |
-| **Phase 5** | 플레이테스트 자동화, 화면 캡처, 플러그인 시스템 | 예정 |
+| **v0.4.0** | AI 코드 품질 개선, Welcome 화면, Rojo 상태 단순화, Full API RAG | ✅ |
+| **v0.5.0** | UX 기본기 + 수익화 + AI 품질 강화 | ✅ |
+| **v0.6.0** | 플레이테스트 자동화, 화면 캡처, 플러그인 시스템 | 예정 |
 
 ---
 
