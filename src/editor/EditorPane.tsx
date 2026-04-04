@@ -158,6 +158,7 @@ export function EditorPane(): JSX.Element {
   const autoSave = useSettingsStore((s) => s.autoSave)
   const autoSaveDelay = useSettingsStore((s) => s.autoSaveDelay)
   const fontSize = useSettingsStore((s) => s.fontSize)
+  const setFontSize = useSettingsStore((s) => s.setFontSize)
   const rightPanelOpen = useSettingsStore((s) => s.rightPanelOpen)
   const chatPanelWidth = useSettingsStore((s) => s.chatPanelWidth)
   const monacoTheme = appTheme === "tokyo-night" ? "luano-tokyo-night" : appTheme === "light" ? "luano-light" : "luano-dark"
@@ -303,17 +304,33 @@ export function EditorPane(): JSX.Element {
     useProjectStore.getState().markClean(path)
   }, [])
 
-  // ── Ctrl+S — manual save ──────────────────────────────────────────────────
+  // ── Ctrl+S — manual save, Ctrl+=/- — font size ─────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault()
         if (activeFile) saveFile(activeFile)
       }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "=" || e.key === "+")) {
+        e.preventDefault()
+        const cur = useSettingsStore.getState().fontSize
+        if (cur < 24) {
+          setFontSize(cur + 1)
+          editorRef.current?.updateOptions({ fontSize: cur + 1 })
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "-") {
+        e.preventDefault()
+        const cur = useSettingsStore.getState().fontSize
+        if (cur > 10) {
+          setFontSize(cur - 1)
+          editorRef.current?.updateOptions({ fontSize: cur - 1 })
+        }
+      }
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [activeFile, saveFile])
+  }, [activeFile, saveFile, setFontSize])
 
   // ── Auto-save ─────────────────────────────────────────────────────────────
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

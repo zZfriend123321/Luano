@@ -21,6 +21,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: "default",
+    icon: join(__dirname, "../../resources/icons/icon.png"),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -65,6 +66,13 @@ function createWindow(): void {
     })
   })
 
+  // Prevent Chromium default zoom (Ctrl+=/-, Ctrl+0) — font size is handled in renderer
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if ((input.control || input.meta) && (input.key === "=" || input.key === "+" || input.key === "-" || input.key === "0")) {
+      event.preventDefault()
+    }
+  })
+
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
     mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"])
     mainWindow.webContents.openDevTools({ mode: "detach" })
@@ -77,7 +85,7 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId("io.luano.app")
 
   app.on("browser-window-created", (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+    optimizer.watchWindowShortcuts(window, { escToCloseWindow: false, zoom: false })
   })
 
   startBridgeServer()

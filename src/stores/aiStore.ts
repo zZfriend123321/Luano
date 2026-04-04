@@ -3,9 +3,11 @@ import { persist, createJSONStorage } from "zustand/middleware"
 
 export interface ChatMessage {
   id: string
-  role: "user" | "assistant"
+  role: "user" | "assistant" | "tool"
   content: string
   streaming?: boolean
+  toolName?: string
+  toolSuccess?: boolean
 }
 
 export interface SessionEntry {

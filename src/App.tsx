@@ -148,13 +148,17 @@ export default function App(): JSX.Element {
   const { setStatus, setPort } = useRojoStore()
   const { setGlobalSummary, clearMessages, saveProjectChat, loadProjectChat } = useAIStore()
   const theme = useSettingsStore((s) => s.theme)
+  const uiScale = useSettingsStore((s) => s.uiScale)
   const addRecentProject = useSettingsStore((s) => s.addRecentProject)
   const t = useT()
 
-  // Apply theme to document root
+  // Apply theme and UI scale to document root
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme)
   }, [theme])
+  useEffect(() => {
+    document.documentElement.style.zoom = `${uiScale}%`
+  }, [uiScale])
   const [activePanel, _setActivePanel] = useState<SidePanel>("explorer")
   const setActivePanel = useCallback((panel: SidePanel) => {
     _setActivePanel(panel)

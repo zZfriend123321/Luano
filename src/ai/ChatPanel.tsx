@@ -18,19 +18,8 @@ interface ChatPanelProps {
   onClose: () => void
 }
 
-interface ToolCallMessage {
-  id: string
-  type: "tool"
-  tool: string
-  success: boolean
-  output: string
-  ts: number
-}
-
-type DisplayMessage = ChatMessage | ToolCallMessage
-
-function isToolMsg(m: DisplayMessage): m is ToolCallMessage {
-  return (m as ToolCallMessage).type === "tool"
+function isToolMsg(m: ChatMessage): boolean {
+  return m.role === "tool"
 }
 
 // ── Icons ────────────────────────────────────────────────────────────────────
@@ -149,7 +138,6 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
   } = useAIStore()
   const { projectPath, activeFile, fileContents } = useProjectStore()
   const [input, setInput] = useState("")
-  const [toolMessages, setToolMessages] = useState<ToolCallMessage[]>([])
   const [bridgeConnected, setBridgeConnected] = useState(false)
   const [allSkills, setAllSkills] = useState<Skill[]>(BUILT_IN_SKILLS)
   const [skillMatches, setSkillMatches] = useState<Skill[]>([])
@@ -246,16 +234,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, toolMessages])
-
-  const displayMessages = useMemo<DisplayMessage[]>(() =>
-    [...messages, ...toolMessages].sort((a, b) => {
-      const aTs = "ts" in a ? a.ts : Number(a.id.split("-")[0]) || 0
-      const bTs = "ts" in b ? b.ts : Number(b.id.split("-")[0]) || 0
-      return aTs - bTs
-    }),
-    [messages, toolMessages]
-  )
+  }, [messages])
 
   const buildContext = () => ({
     globalSummary,
@@ -354,18 +333,12 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             updateMessage(assistantId, accumulated, true)
           },
           (event: ToolEvent) => {
-            const now = Date.now()
-            setToolMessages((prev) => [
-              ...prev.slice(-99),
-              {
-                id: `tool-${now}-${Math.random()}`,
-                type: "tool",
-                tool: event.tool,
-                success: event.success,
-                output: event.output.slice(0, 200),
-                ts: now
-              }
-            ])
+            addMessage({
+              role: "tool",
+              content: event.output.slice(0, 200),
+              toolName: event.tool,
+              toolSuccess: event.success
+            })
           },
           (roundInfo) => {
             setAgentRound(roundInfo.round)
@@ -470,6 +443,13 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
         setSkillMatches([])
         return
       }
+    }
+    if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault()
+      if (planMode) { setPlanMode(false); setAutoAccept(false) }
+      else if (autoAccept) { setPlanMode(true); setAutoAccept(false) }
+      else { setPlanMode(false); setAutoAccept(true) }
+      return
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -718,8 +698,8 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
           </div>
         )}
         {(() => {
-          const grouped: (DisplayMessage | ToolCallMessage[])[] = []
-          for (const msg of displayMessages) {
+          const grouped: (ChatMessage | ChatMessage[])[] = []
+          for (const msg of messages) {
             if (isToolMsg(msg)) {
               const last = grouped[grouped.length - 1]
               if (Array.isArray(last)) {
@@ -735,7 +715,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             Array.isArray(item) ? (
               <ToolCallGroup key={`tg-${i}`} events={item} />
             ) : (
-              <MessageBubble key={(item as ChatMessage).id} message={item as ChatMessage} />
+              <MessageBubble key={item.id} message={item} />
             )
           )
         })()}
@@ -914,7 +894,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
             style={{
               background: "var(--bg-elevated)",
               color: "var(--text-primary)",
-              fontSize: "12px",
+              fontSize: "14px",
               padding: "8px 10px 0px",
               lineHeight: "1.5",
               display: "block"
@@ -1110,7 +1090,7 @@ const MessageBubble = React.memo(function MessageBubble({ message }: { message: 
         <div
           className="max-w-full rounded-xl px-3 py-2 selectable"
           style={{
-            fontSize: "12px",
+            fontSize: "14px",
             lineHeight: "1.6",
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
@@ -1131,7 +1111,7 @@ const MessageBubble = React.memo(function MessageBubble({ message }: { message: 
                 key={i}
                 className="rounded-xl px-3 py-2 selectable"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "14px",
                   lineHeight: "1.65",
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
@@ -1195,11 +1175,11 @@ function ToolIcon({ type, size = 10 }: { type: string; size?: number }): JSX.Ele
   }
 }
 
-function ToolCallGroup({ events }: { events: ToolCallMessage[] }): JSX.Element {
+function ToolCallGroup({ events }: { events: ChatMessage[] }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
-  const allSuccess = events.every((e) => e.success)
-  const failCount = events.filter((e) => !e.success).length
+  const allSuccess = events.every((e) => e.toolSuccess !== false)
+  const failCount = events.filter((e) => e.toolSuccess === false).length
 
   const toggleItem = (id: string) => {
     setExpandedItems((prev) => {
@@ -1214,7 +1194,8 @@ function ToolCallGroup({ events }: { events: ToolCallMessage[] }): JSX.Element {
   const toolSummary = (() => {
     const counts: Record<string, number> = {}
     for (const e of events) {
-      const label = TOOL_META[e.tool]?.label ?? e.tool
+      const name = e.toolName ?? "unknown"
+      const label = TOOL_META[name]?.label ?? name
       counts[label] = (counts[label] ?? 0) + 1
     }
     return Object.entries(counts).map(([label, n]) => n > 1 ? `${label} x${n}` : label).join(", ")
@@ -1278,7 +1259,8 @@ function ToolCallGroup({ events }: { events: ToolCallMessage[] }): JSX.Element {
         {expanded && (
           <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
             {events.map((event, i) => {
-              const meta = TOOL_META[event.tool] ?? { label: event.tool, icon: "default" }
+              const toolName = event.toolName ?? "unknown"
+              const meta = TOOL_META[toolName] ?? { label: toolName, icon: "default" }
               const isBridge = meta.bridge === true
               const isOpen = expandedItems.has(event.id)
               const isLast = i === events.length - 1
@@ -1302,7 +1284,7 @@ function ToolCallGroup({ events }: { events: ToolCallMessage[] }): JSX.Element {
                     <span
                       className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                       style={{
-                        color: isBridge ? "#818cf8" : event.success ? "var(--text-muted)" : "#ef4444",
+                        color: isBridge ? "#818cf8" : event.toolSuccess !== false ? "var(--text-muted)" : "#ef4444",
                         opacity: 0.7
                       }}
                     >
@@ -1315,7 +1297,7 @@ function ToolCallGroup({ events }: { events: ToolCallMessage[] }): JSX.Element {
                     }}>
                       {meta.label}
                     </span>
-                    {!event.success && (
+                    {event.toolSuccess === false && (
                       <span
                         className="px-1 py-0.5 rounded text-center"
                         style={{ fontSize: "8px", background: "rgba(239,68,68,0.1)", color: "#ef4444", lineHeight: 1 }}
@@ -1347,7 +1329,7 @@ function ToolCallGroup({ events }: { events: ToolCallMessage[] }): JSX.Element {
                         overflowY: "auto"
                       }}
                     >
-                      {event.output || <span style={{ fontStyle: "italic", opacity: 0.5 }}>No output</span>}
+                      {event.content || <span style={{ fontStyle: "italic", opacity: 0.5 }}>No output</span>}
                     </div>
                   )}
                 </div>

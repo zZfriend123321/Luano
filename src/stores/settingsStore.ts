@@ -19,6 +19,7 @@ interface SettingsStore {
   autoSave: boolean
   autoSaveDelay: number
   fontSize: number
+  uiScale: number
   recentProjects: RecentProject[]
   // Layout persistence
   sidePanelWidth: number
@@ -35,6 +36,7 @@ interface SettingsStore {
   setAutoSave: (enabled: boolean) => void
   setAutoSaveDelay: (ms: number) => void
   setFontSize: (size: number) => void
+  setUiScale: (scale: number) => void
   setSidePanelWidth: (w: number) => void
   setChatPanelWidth: (w: number) => void
   setTerminalHeight: (h: number) => void
@@ -56,6 +58,7 @@ export const useSettingsStore = create<SettingsStore>()(
       autoSave: true,
       autoSaveDelay: 1000,
       fontSize: 13,
+      uiScale: 100,
       recentProjects: [],
       sidePanelWidth: 224,
       chatPanelWidth: 320,
@@ -71,6 +74,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setAutoSave: (autoSave) => set({ autoSave }),
       setAutoSaveDelay: (autoSaveDelay) => set({ autoSaveDelay }),
       setFontSize: (fontSize) => set({ fontSize }),
+      setUiScale: (uiScale) => set({ uiScale }),
       setSidePanelWidth: (sidePanelWidth) => set({ sidePanelWidth }),
       setChatPanelWidth: (chatPanelWidth) => set({ chatPanelWidth }),
       setTerminalHeight: (terminalHeight) => set({ terminalHeight }),
@@ -98,6 +102,7 @@ export const useSettingsStore = create<SettingsStore>()(
         autoSave: state.autoSave,
         autoSaveDelay: state.autoSaveDelay,
         fontSize: state.fontSize,
+        uiScale: state.uiScale,
         recentProjects: state.recentProjects,
         sidePanelWidth: state.sidePanelWidth,
         chatPanelWidth: state.chatPanelWidth,

@@ -251,7 +251,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
     apiKey, setApiKey, openaiKey, setOpenAIKey,
     provider, setProvider, model, setModel,
     autoSave, setAutoSave, autoSaveDelay, setAutoSaveDelay,
-    fontSize, setFontSize
+    fontSize, setFontSize,
+    uiScale, setUiScale
   } = useSettingsStore()
   const { projectPath } = useProjectStore()
   const t = useT()
@@ -486,6 +487,32 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
                 }}
               >
                 {fontSize}px
+              </span>
+            </div>
+
+            {/* UI Scale */}
+            <div className="flex items-center gap-2.5">
+              <span style={{ fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{t("uiScale")}</span>
+              <input
+                type="range"
+                min={80}
+                max={150}
+                step={5}
+                value={uiScale}
+                onChange={(e) => setUiScale(Number(e.target.value))}
+                className="flex-1 accent-[var(--accent)]"
+                style={{ height: 4 }}
+              />
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "var(--text-muted)",
+                  fontFamily: "monospace",
+                  minWidth: 36,
+                  textAlign: "right"
+                }}
+              >
+                {uiScale}%
               </span>
             </div>
           </div>
