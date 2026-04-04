@@ -6,6 +6,7 @@ import { CodeBlock } from "./CodeBlock"
 import { useT } from "../i18n/useT"
 import { useIpcEvent } from "../hooks/useIpc"
 import { BUILT_IN_SKILLS, mergeSkills, findSkills, expandSkill, Skill } from "./skills"
+import { getFileName } from "../lib/utils"
 
 interface ToolEvent {
   tool: string
@@ -219,7 +220,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
     if (typeof window.api.aiRevert !== "function") return
     const res = await window.api.aiRevert()
     if (res.success && res.reverted) {
-      const names = res.reverted.map((f) => f.split(/[/\\]/).pop()).join(", ")
+      const names = res.reverted.map(getFileName).join(", ")
       addMessage({ role: "assistant", content: `Reverted ${res.reverted.length} file(s): ${names}` })
     }
     setPendingReview(null)
@@ -272,7 +273,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
   const attachCurrentFile = () => {
     if (!activeFile || !fileContents[activeFile]) return
     if (attachedFiles.some((f) => f.path === activeFile)) return
-    const name = activeFile.split(/[/\\]/).pop() ?? activeFile
+    const name = getFileName(activeFile)
     setAttachedFiles((prev) => [...prev, {
       path: activeFile,
       name,
@@ -286,7 +287,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
   const buildApiMessages = useCallback((userMsg: string) => {
     const history = messages
-      .filter((m) => !m.streaming)
+      .filter((m) => !m.streaming && m.role !== "tool")
       .map((m) => ({ role: m.role, content: m.content }))
     history.push({ role: "user", content: userMsg })
     return history
@@ -346,7 +347,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
         )
         updateMessage(assistantId, accumulated, false)
         if (result.modifiedFiles.length > 0) {
-          const names = result.modifiedFiles.map((f) => f.split(/[/\\]/).pop()).join(", ")
+          const names = result.modifiedFiles.map(getFileName).join(", ")
           updateMessage(assistantId, `${accumulated}\n\n Modified: ${names}`, false)
           if (!autoAccept) {
             setPendingReview({ files: result.modifiedFiles, messageId: assistantId })
@@ -750,7 +751,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
                     border: "1px solid var(--border-subtle)"
                   }}
                 >
-                  {f.split(/[/\\]/).pop()}
+                  {getFileName(f)}
                 </span>
               ))}
             </div>
@@ -999,7 +1000,7 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
               <button
                 onClick={attachCurrentFile}
                 disabled={!activeFile || !projectPath}
-                title={activeFile ? `Attach ${activeFile.split(/[/\\]/).pop()}` : "Open a file first"}
+                title={activeFile ? `Attach ${getFileName(activeFile)}` : "Open a file first"}
                 className="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all duration-100 disabled:opacity-30"
                 style={{ fontSize: "10px", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}
               >

@@ -75,7 +75,7 @@ interface Window {
     // 파일
     readFile: (path: string) => Promise<string>
     writeFile: (path: string, content: string) => Promise<{ success: boolean }>
-    readDir: (path: string) => Promise<unknown[]>
+    readDir: (path: string) => Promise<import("./stores/projectStore").FileEntry[]>
     watchProject: (path: string) => Promise<{ success: boolean }>
     createFile: (dirPath: string, name: string) => Promise<{ success: boolean; path: string }>
     createFolder: (dirPath: string, name: string) => Promise<{ success: boolean; path: string }>

@@ -3,6 +3,7 @@
 
 import { useState, useRef, useCallback } from "react"
 import { useProjectStore } from "../stores/projectStore"
+import { getFileName } from "../lib/utils"
 
 interface SearchResult {
   file: string
@@ -130,7 +131,7 @@ export function SearchPanel(): JSX.Element {
             const displayPath = filePath.replace(/\\/g, "/")
             const srcIdx = displayPath.lastIndexOf("src/")
             const shortPath = srcIdx !== -1 ? displayPath.slice(srcIdx) : displayPath
-            const fileName = filePath.split(/[/\\]/).pop() ?? filePath
+            const fileName = getFileName(filePath)
 
             return (
               <div key={filePath} className="mb-1">

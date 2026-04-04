@@ -10,6 +10,7 @@ import { useIpcEvent } from "../hooks/useIpc"
 import { startLuauLanguageClient, stopLuauLanguageClient } from "./LuauLanguageClient"
 import { registerLuauSnippets } from "./LuauSnippets"
 import { InlineEditOverlay } from "../lib/loadPro"
+import { getFileName } from "../lib/utils"
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
@@ -465,7 +466,7 @@ export function EditorPane(): JSX.Element {
         }}
       >
         {openFiles.map((path, idx) => {
-          const name = path.split(/[/\\]/).pop() ?? path
+          const name = getFileName(path)
           const isActive = path === activeFile
           const isDirty = dirtyFiles.includes(path)
 
@@ -656,7 +657,7 @@ export function EditorPane(): JSX.Element {
                   style={{ height: "28px", background: "var(--bg-panel)", borderBottom: "1px solid var(--border-subtle)" }}
                 >
                   <span className="text-[11px] truncate" style={{ color: "var(--text-secondary)" }}>
-                    {splitFile.split(/[/\\]/).pop()}
+                    {getFileName(splitFile)}
                   </span>
                   <div className="flex items-center gap-1">
                     {/* File picker for split */}
@@ -673,7 +674,7 @@ export function EditorPane(): JSX.Element {
                       }}
                     >
                       {openFiles.map(f => (
-                        <option key={f} value={f}>{f.split(/[/\\]/).pop()}</option>
+                        <option key={f} value={f}>{getFileName(f)}</option>
                       ))}
                     </select>
                     <button
@@ -739,7 +740,7 @@ export function EditorPane(): JSX.Element {
 
       {/* Close-with-unsaved-changes confirmation */}
       {closeConfirm && (() => {
-        const fileName = closeConfirm.split(/[/\\]/).pop() ?? closeConfirm
+        const fileName = getFileName(closeConfirm)
         const handleSave = async () => {
           await saveFile(closeConfirm)
           closeFile(closeConfirm)

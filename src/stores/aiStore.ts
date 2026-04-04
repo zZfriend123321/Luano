@@ -119,26 +119,7 @@ export const useAIStore = create<AIStore>()(
       },
 
       loadProjectChat: (projectPath) => {
-        const { sessions } = get()
-        const projectSessions = sessions[projectPath] ?? []
-        // Migrate from old chatHistory format if needed
-        const legacy = (get() as unknown as Record<string, unknown>).chatHistory as Record<string, ChatMessage[]> | undefined
-        if (projectSessions.length === 0 && legacy?.[projectPath]?.length) {
-          const msgs = legacy[projectPath]
-          const sid = makeSessionId()
-          const entry: SessionEntry = {
-            id: sid,
-            messages: msgs,
-            createdAt: Date.now(),
-            preview: makePreview(msgs)
-          }
-          set({
-            messages: msgs,
-            activeSessionId: sid,
-            sessions: { ...sessions, [projectPath]: [entry] }
-          })
-          return
-        }
+        const projectSessions = get().sessions[projectPath] ?? []
         if (projectSessions.length > 0) {
           const latest = projectSessions[projectSessions.length - 1]
           set({ messages: latest.messages, activeSessionId: latest.id })
@@ -233,9 +214,7 @@ export const useAIStore = create<AIStore>()(
       name: "luano-ai",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        sessions: state.sessions,
-        // Keep chatHistory for backwards compat migration
-        ...(((state as unknown as Record<string, unknown>).chatHistory) ? { chatHistory: (state as unknown as Record<string, unknown>).chatHistory } : {})
+        sessions: state.sessions
       })
     }
   )

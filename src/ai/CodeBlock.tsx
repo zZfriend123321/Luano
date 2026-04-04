@@ -3,6 +3,7 @@ import { useProjectStore } from "../stores/projectStore"
 import { useAIStore } from "../stores/aiStore"
 import { useT } from "../i18n/useT"
 import { DiffView } from "../lib/loadPro"
+import { getFileName } from "../lib/utils"
 
 interface CodeBlockProps {
   code: string
@@ -138,7 +139,7 @@ export function CodeBlock({ code, lang }: CodeBlockProps): JSX.Element {
               {t("diffPreview")}
             </span>
             <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-              {activeFile?.split(/[/\\]/).pop()}
+              {activeFile ? getFileName(activeFile) : null}
             </span>
             <span
               className="ml-auto"

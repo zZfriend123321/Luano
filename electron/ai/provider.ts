@@ -205,7 +205,7 @@ export async function chat(messages: ChatMessage[], systemPrompt: string): Promi
   trackUsage(
     response.usage.input_tokens,
     response.usage.output_tokens,
-    (response.usage as unknown as Record<string, number>).cache_read_input_tokens ?? 0
+    "cache_read_input_tokens" in response.usage ? (response.usage as Record<string, number>).cache_read_input_tokens : 0
   )
   return response.content[0].type === "text" ? response.content[0].text : ""
 }
@@ -262,7 +262,7 @@ export async function chatStream(
     trackUsage(
       finalMessage.usage.input_tokens,
       finalMessage.usage.output_tokens,
-      (finalMessage.usage as unknown as Record<string, number>).cache_read_input_tokens ?? 0
+      "cache_read_input_tokens" in finalMessage.usage ? (finalMessage.usage as Record<string, number>).cache_read_input_tokens : 0
     )
     send(null)
   } catch (err) {

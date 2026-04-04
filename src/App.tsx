@@ -226,7 +226,7 @@ export default function App(): JSX.Element {
   const handleChatResizeMouseDown = usePanelResize("x", chatPanelMin, chatPanelMax, setChatPanelWidth, true)
 
   useIpcEvent("rojo:status-changed", useCallback((...args: unknown[]) => {
-    setStatus(args[0] as never)
+    setStatus(args[0] as "stopped" | "starting" | "running" | "error")
     if (typeof args[1] === "number") setPort(args[1])
   }, [setStatus, setPort]))
   useIpcEvent("file:added", () => refreshFileTree())
@@ -242,7 +242,7 @@ export default function App(): JSX.Element {
   const refreshFileTree = async () => {
     if (!projectPath) return
     const tree = await window.api.readDir(projectPath)
-    setFileTree(tree as never)
+    setFileTree(tree)
   }
 
   const openPath = useCallback(async (path: string) => {
@@ -253,7 +253,7 @@ export default function App(): JSX.Element {
         window.api.readDir(path),
         window.api.buildContext(path)
       ])
-      setProject(path, tree as never, lspPort)
+      setProject(path, tree, lspPort)
       setGlobalSummary(globalSummary)
       addRecentProject(path)
       return true

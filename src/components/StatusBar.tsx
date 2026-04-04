@@ -3,6 +3,7 @@ import { useRojoStore } from "../stores/rojoStore"
 import { useProjectStore } from "../stores/projectStore"
 import { useIpcEvent } from "../hooks/useIpc"
 import { useT } from "../i18n/useT"
+import { getFileName } from "../lib/utils"
 
 type UpdateStatus = "idle" | "checking" | "available" | "downloading" | "downloaded" | "error"
 interface UpdateState {
@@ -184,7 +185,7 @@ export function StatusBar(): JSX.Element {
           className={update.status === "available" || update.status === "downloading" || update.status === "downloaded" ? "truncate max-w-[240px]" : "ml-auto truncate max-w-[240px]"}
           style={{ color: "var(--text-secondary)" }}
         >
-          {activeFile.split(/[/\\]/).pop()}
+          {getFileName(activeFile)}
         </span>
       )}
     </div>

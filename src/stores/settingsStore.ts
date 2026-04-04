@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
+import { getFileName } from "../lib/utils"
 
 export type AppTheme = "dark" | "light" | "tokyo-night"
 
@@ -81,7 +82,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setTerminalOpen: (terminalOpen) => set({ terminalOpen }),
       setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
       addRecentProject: (path) => {
-        const name = path.split(/[/\\]/).pop() ?? path
+        const name = getFileName(path)
         const existing = get().recentProjects.filter((p) => p.path !== path)
         set({ recentProjects: [{ path, name, openedAt: Date.now() }, ...existing].slice(0, 10) })
       },
