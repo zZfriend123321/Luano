@@ -127,6 +127,9 @@ npm install --package-lock-only
 
 ## 릴리즈 히스토리
 
+- **v0.6.3** — English Comments + Bridge Fix
+- **v0.6.2** — Code Optimization + Refactoring
+- **v0.6.1** — CI Fix + Vitest Downgrade
 - **v0.6.0** — Light Theme + Split Editor + UX Polish
 - **v0.5.0** — UX 기본기 + 수익화 + AI 품질 강화
 - **v0.4.0** — AI 코드 품질 개선 + Welcome 화면 + Full API RAG
@@ -200,7 +203,7 @@ gh run watch <RUN_ID> --repo ltfupb/Luano
 ```
 
 **규칙:**
-- 버전명에 v 접두사 필수 (v0.6.0)
+- **릴리즈 제목에 반드시 v 접두사** (예: `v0.6.3 — English Comments and Bridge Fix`). `gh release edit --title`로 설정. CI 자동 생성 시 v가 빠지므로 수동 확인 필수.
 - 릴리즈 노트는 영어로 작성
 - 제목 첫줄: 쉼표 없이 간결하게 (예: `v0.6.0 — Light Theme and Split Editor`)
 - Binaries 테이블 항상 포함
