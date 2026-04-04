@@ -101,16 +101,27 @@ npx eslint "src/**/*.{ts,tsx}" "electron/**/*.ts" --max-warnings 20
 
 세 명령어 모두 통과해야 CI가 통과한다. **반드시 push 전에 실행할 것.**
 
-### 6. package-lock.json 동기화 확인
+### 6. package-lock.json 동기화 — 반드시 `npm install`로 생성
 
-`npm install`로 패키지를 추가/업데이트한 뒤 `package-lock.json`이 최신 상태인지 확인해야 한다. CI는 `npm ci`를 사용하므로 `package.json`과 `package-lock.json`이 어긋나면 빌드가 실패한다.
+CI는 `npm ci`를 사용하므로 `package.json`과 `package-lock.json`이 어긋나면 빌드가 실패한다.
 
+**핵심 규칙: `npm install --package-lock-only` 사용 금지.**
+이 명령은 현재 OS의 optional dependency만 resolve하므로, 다른 플랫폼(Linux CI)의 esbuild 바이너리가 lock file에서 누락된다.
+
+**올바른 방법:**
 ```bash
-npm install          # lock file 동기화
-git diff package-lock.json   # 변경 있으면 함께 커밋
+# version bump 등으로 lock file 재생성이 필요할 때:
+rm -f package-lock.json && npm install   # 전체 재생성 (모든 플랫폼 deps 포함)
+git diff package-lock.json               # 변경 있으면 함께 커밋
 ```
 
-**특히 esbuild, electron 등 네이티브 바이너리 의존성은 lock file 누락 시 모든 플랫폼 빌드가 실패한다.**
+**잘못된 방법 (CI 실패):**
+```bash
+# ❌ cross-platform esbuild deps 누락됨
+npm install --package-lock-only
+```
+
+**주의:** Electron이 실행 중이면 `node_modules`가 잠겨서 `npm install`이 실패한다. 반드시 앱을 종료한 후 실행할 것.
 
 ---
 
