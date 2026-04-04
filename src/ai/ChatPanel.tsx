@@ -328,8 +328,14 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
   const handleAbort = useCallback(() => {
     window.api.aiAbort()
+    setStreaming(false)
     setAgentRound(0)
-  }, [])
+    // Mark last streaming message as done
+    const last = messages[messages.length - 1]
+    if (last?.streaming) {
+      updateMessage(last.id, last.content + "\n\n*(cancelled)*", false)
+    }
+  }, [messages, setStreaming, updateMessage])
 
   // ── Agent mode: AI reads/writes files directly ──────────────────────────
   const executeAgent = useCallback(

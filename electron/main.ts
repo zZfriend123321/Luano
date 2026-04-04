@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron"
+import { app, BrowserWindow, dialog, shell } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import { registerIpcHandlers } from "./ipc/handlers"
@@ -37,6 +37,32 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: "deny" }
+  })
+
+  mainWindow.on("close", (e) => {
+    const result = mainWindow!.webContents.executeJavaScript(
+      "window.__luanoDirtyCount?.()"
+    ).catch(() => 0)
+    result.then((count: number) => {
+      if (!count) return
+      e.preventDefault()
+      dialog.showMessageBox(mainWindow!, {
+        type: "warning",
+        buttons: ["Save & Quit", "Quit without Saving", "Cancel"],
+        defaultId: 0,
+        cancelId: 2,
+        title: "Unsaved Changes",
+        message: `${count} unsaved file(s). Save before quitting?`
+      }).then(({ response }) => {
+        if (response === 0) {
+          mainWindow!.webContents.executeJavaScript("window.__luanoSaveAll?.()").then(() => {
+            mainWindow!.destroy()
+          }).catch(() => mainWindow!.destroy())
+        } else if (response === 1) {
+          mainWindow!.destroy()
+        }
+      })
+    })
   })
 
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {

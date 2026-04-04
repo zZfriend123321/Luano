@@ -290,7 +290,27 @@ export default function App(): JSX.Element {
       }
     }
     window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+
+    // Expose helpers for native quit confirmation dialog
+    const w = window as unknown as Record<string, unknown>
+    w.__luanoDirtyCount = () =>
+      useProjectStore.getState().dirtyFiles.length
+    w.__luanoSaveAll = async () => {
+      const { dirtyFiles, fileContents, markClean } = useProjectStore.getState()
+      for (const f of dirtyFiles) {
+        const content = fileContents[f]
+        if (content !== undefined) {
+          await window.api.writeFile(f, content)
+          markClean(f)
+        }
+      }
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload)
+      delete w.__luanoDirtyCount
+      delete w.__luanoSaveAll
+    }
   }, [])
 
   // ── 오프라인 감지 ────────────────────────────────────────────────────────────
