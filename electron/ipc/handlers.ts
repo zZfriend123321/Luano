@@ -15,7 +15,7 @@ import {
   setProvider, setModel, getProviderAndModel,
   MODELS, getTokenUsage, resetTokenUsage
 } from "../ai/provider"
-import { isPro, hasFeature, type ProFeature } from "../pro"
+import { isPro, hasFeature } from "../pro"
 import { activateLicense, deactivateLicense, getLicenseInfo, validateLicense as revalidateLicense } from "../pro/license"
 import {
   getMemories, addMemory, updateMemory, deleteMemory,
@@ -145,12 +145,6 @@ function collectLuauFiles(dir: string): string[] {
   return results
 }
 
-const PRO_REQUIRED = (feature: ProFeature) => ({
-  success: false,
-  error: "pro_required",
-  feature,
-  message: `This feature requires Luano Pro. Upgrade at luano.dev/pricing`
-})
 
 // ── Terminal (node-pty) ────────────────────────────────────────────────────────
 interface PtyEntry {
@@ -383,7 +377,6 @@ export function registerIpcHandlers(): void {
       instruction: string,
       contextData: unknown
     ) => {
-      if (!hasFeature("inline-edit")) return PRO_REQUIRED("inline-edit")
       const ctx = contextData as { globalSummary: string; currentFile?: string }
       const systemPrompt = buildSystemPrompt({
         globalSummary: ctx.globalSummary ?? "",
@@ -400,7 +393,6 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     "ai:agent-chat",
     async (_, messages: unknown[], contextData: unknown, streamChannel: string) => {
-      if (!hasFeature("agent")) return PRO_REQUIRED("agent")
       const ctx = contextData as AIContext
 
       const { lastUserMsg, docsContext } = await buildRAGContext(messages)
@@ -462,38 +454,31 @@ export function registerIpcHandlers(): void {
 
   // ── Studio Bridge (legacy MCP) [Pro] ───────────────────────────────────────
   ipcMain.handle("studio:get-console", async () => {
-    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     return getConsoleOutput()
   })
 
   ipcMain.handle("studio:is-connected", async () => {
-    if (!hasFeature("studio-bridge")) return false
     return isStudioConnected()
   })
 
-  // ── Live Bridge [Pro] ─────────────────────────────────────────────────────
+  // ── Live Bridge ─────────────────────────────────────────────────────────
   ipcMain.handle("bridge:get-tree", () => {
-    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     return getBridgeTree()
   })
   ipcMain.handle("bridge:get-logs", () => {
-    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     return getBridgeLogs()
   })
   ipcMain.handle("bridge:is-connected", () => {
     return isBridgeConnected()
   })
   ipcMain.handle("bridge:clear-logs", () => {
-    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     clearBridgeLogs(); return { success: true }
   })
   ipcMain.handle("bridge:run-script", (_, code: string) => {
-    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     const id = queueScript(code)
     return { id }
   })
   ipcMain.handle("bridge:get-command-result", (_, id: string) => {
-    if (!hasFeature("studio-bridge")) return PRO_REQUIRED("studio-bridge")
     return getCommandResult(id)
   })
 
@@ -668,14 +653,12 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle("telemetry:stats", () => telemetryStats())
 
-  // ── AI Evaluator [Pro] ────────────────────────────────────────────────────
+  // ── AI Evaluator ────────────────────────────────────────────────────────
   ipcMain.handle("ai:evaluate", async (_, filePath: string, content: string, instruction?: string) => {
-    if (!hasFeature("agent")) return PRO_REQUIRED("agent")
     return evaluateCode(filePath, content, instruction)
   })
 
   ipcMain.handle("ai:evaluate-batch", async (_, files: Array<{ path: string; content: string }>, instruction?: string) => {
-    if (!hasFeature("agent")) return PRO_REQUIRED("agent")
     return evaluateFiles(files, instruction)
   })
 

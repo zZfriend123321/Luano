@@ -162,18 +162,14 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
     setTimeout(() => setSessionsClosing(false), 180)
   }, [])
 
-  const [proFeatures, setProFeatures] = useState<Record<string, boolean>>({})
   const [allModels, setAllModels] = useState<Record<string, Array<{ id: string; label: string }>>>({})
   const availableModels = allModels[provider] ?? []
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const t = useT()
 
-  // Load pro status + models
+  // Load models
   useEffect(() => {
-    window.api.getProStatus().then((s: { features: Record<string, boolean> }) => {
-      setProFeatures(s.features ?? {})
-    }).catch(() => {})
     window.api.aiGetProviderModel().then((result: { provider: string; model: string; models: Record<string, Array<{ id: string; label: string }>> }) => {
       setAllModels(result.models)
     }).catch(() => {})
@@ -410,17 +406,10 @@ export function ChatPanel({ onClose }: ChatPanelProps): JSX.Element {
 
     if (planMode) {
       await doSendChat(apiMessages)
-    } else if (proFeatures.agent === false) {
-      // Agent mode requires Pro — fall back to basic chat with a notice
-      addMessage({
-        role: "assistant",
-        content: "Agent mode requires **Luano Pro**. Switching to chat mode.\n\nUpgrade at [luano.dev/pricing](https://luano.dev/pricing) for autonomous coding, inline edit, Studio bridge, and more."
-      })
-      await doSendChat(apiMessages)
     } else {
       await executeAgent(apiMessages)
     }
-  }, [input, isStreaming, planMode, proFeatures, addMessage, buildApiMessages, doSendChat, executeAgent])
+  }, [input, isStreaming, planMode, addMessage, buildApiMessages, doSendChat, executeAgent])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Skills autocomplete navigation

@@ -161,10 +161,10 @@ const agent = tryRequire<{
 }>("../ai/agent")
 
 export const agentChat = agent?.agentChat
-  ?? (async (): Promise<{ modifiedFiles: string[] }> => { throw new Error("Agent mode requires Luano Pro") })
+  ?? (async (): Promise<{ modifiedFiles: string[] }> => { throw new Error("Agent module not available — ensure ai/agent module is present") })
 
 export const inlineEdit = agent?.inlineEdit
-  ?? (async (): Promise<string> => { throw new Error("Inline edit requires Luano Pro") })
+  ?? (async (): Promise<string> => { throw new Error("Inline edit module not available — ensure ai/agent module is present") })
 
 export const getLastCheckpoint = agent?.getLastCheckpoint ?? (() => null)
 export const revertCheckpoint = agent?.revertCheckpoint ?? (() => [])
