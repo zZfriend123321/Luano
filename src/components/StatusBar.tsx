@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useRojoStore } from "../stores/rojoStore"
+import { useArgonStore } from "../stores/argonStore"
 import { useProjectStore } from "../stores/projectStore"
 import { useIpcEvent } from "../hooks/useIpc"
 import { useT } from "../i18n/useT"
@@ -26,8 +27,16 @@ const statusLabel: Record<string, string> = {
   error: "Rojo error"
 }
 
+const argonStatusLabel: Record<string, string> = {
+  stopped: "Argon stopped",
+  starting: "Argon starting…",
+  running: "Argon serving",
+  error: "Argon error"
+}
+
 export function StatusBar(): JSX.Element {
   const { status } = useRojoStore()
+  const { status: argonStatus } = useArgonStore()
   const { activeFile, lspPort } = useProjectStore()
   const [update, setUpdate] = useState<UpdateState>({ status: "idle" })
   const t = useT()
@@ -96,6 +105,19 @@ export function StatusBar(): JSX.Element {
           }}
         />
         <span style={{ color: "var(--text-secondary)" }}>{statusLabel[status] ?? status}</span>
+      </div>
+
+      {/* Argon status */}
+      <span style={{ color: "var(--border)", userSelect: "none" }}>·</span>
+      <div className="flex items-center gap-1.5">
+        <span
+          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+          style={{
+            background: statusDot[argonStatus] ?? statusDot.stopped,
+            boxShadow: argonStatus === "running" ? "0 0 4px #10b981" : "none"
+          }}
+        />
+        <span style={{ color: "var(--text-secondary)" }}>{argonStatusLabel[argonStatus] ?? argonStatus}</span>
       </div>
 
       {/* Separator */}

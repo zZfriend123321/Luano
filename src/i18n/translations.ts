@@ -78,6 +78,14 @@ export const translations = {
     running: "Running…",
     noLogs: "No logs",
 
+    // ArgonPanel
+    argonStatus: "Argon Status",
+    argonStopped: "Stopped",
+    argonStarting: "Starting…",
+    argonServing: "Serving",
+    argonError: "Error",
+    argonStartServing: "Start serving",
+
     // Settings
     settings: "Settings",
     language: "Language",
@@ -249,6 +257,14 @@ export const translations = {
     lintAll: "전체 린트",
     running: "실행 중…",
     noLogs: "로그 없음",
+
+    // ArgonPanel
+    argonStatus: "Argon 상태",
+    argonStopped: "중지됨",
+    argonStarting: "시작 중…",
+    argonServing: "서빙 중",
+    argonError: "오류",
+    argonStartServing: "서빙 시작",
 
     settings: "설정",
     language: "언어 / Language",

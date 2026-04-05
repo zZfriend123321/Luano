@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { useRojoStore } from "../stores/rojoStore"
+import { useArgonStore } from "../stores/argonStore"
 import { useProjectStore } from "../stores/projectStore"
 import { useAIStore } from "../stores/aiStore"
 import { useT } from "../i18n/useT"
@@ -15,6 +16,13 @@ type SyncTab = "console" | "tree"
 // ── Rojo status config ────────────────────────────────────────────────────────
 
 const rojoStatusCfg: Record<string, { color: string; glow: boolean }> = {
+  stopped:  { color: "#3a5272", glow: false },
+  starting: { color: "#f59e0b", glow: false },
+  running:  { color: "#10b981", glow: true },
+  error:    { color: "#e11d48", glow: false }
+}
+
+const argonStatusCfg: Record<string, { color: string; glow: boolean }> = {
   stopped:  { color: "#3a5272", glow: false },
   starting: { color: "#f59e0b", glow: false },
   running:  { color: "#10b981", glow: true },
@@ -203,6 +211,7 @@ function TreeNode({ node, depth = 0 }: { node: BridgeInstanceNode; depth?: numbe
 
 export function SyncPanel(): JSX.Element {
   const { status: rojoStatus, port } = useRojoStore()
+  const { status: argonStatus, port: argonPort } = useArgonStore()
   const { projectPath } = useProjectStore()
   const { globalSummary } = useAIStore()
   const t = useT()
@@ -222,6 +231,9 @@ export function SyncPanel(): JSX.Element {
 
   const rcfg = rojoStatusCfg[rojoStatus] ?? rojoStatusCfg.stopped
   const isRojoActive = rojoStatus === "running" || rojoStatus === "starting"
+
+  const acfg = argonStatusCfg[argonStatus] ?? argonStatusCfg.stopped
+  const isArgonActive = argonStatus === "running" || argonStatus === "starting"
 
   // ── Studio initial fetch ──────────────────────────────────────────────────
   useEffect(() => {
@@ -256,6 +268,12 @@ export function SyncPanel(): JSX.Element {
     if (!projectPath) return
     if (isRojoActive) await window.api.rojoStop()
     else await window.api.rojoServe(projectPath)
+  }
+
+  const handleArgonToggle = async () => {
+    if (!projectPath) return
+    if (isArgonActive) await window.api.argonStop()
+    else await window.api.argonServe(projectPath)
   }
 
   const handleInstall = async () => {
@@ -326,6 +344,35 @@ export function SyncPanel(): JSX.Element {
             }}
           >
             {isRojoActive ? t("stop") : t("startServing")}
+          </button>
+        </div>
+
+        {/* Argon status */}
+        <div className="flex items-center gap-2">
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{
+              background: acfg.color,
+              boxShadow: acfg.glow ? `0 0 6px ${acfg.color}` : "none",
+              transition: "all 0.3s ease"
+            }}
+          />
+          <span style={{ fontSize: "11px", color: "var(--text-secondary)", flex: 1 }}>
+            Argon
+            {argonStatus === "running" && argonPort && (
+              <span style={{ color: "var(--text-muted)", marginLeft: "4px" }}>:{argonPort}</span>
+            )}
+          </span>
+          <button
+            onClick={handleArgonToggle}
+            className="px-2 py-0.5 rounded text-[10px] font-medium transition-all duration-150"
+            style={{
+              background: isArgonActive ? "rgba(225,29,72,0.12)" : "rgba(37,99,235,0.12)",
+              color: isArgonActive ? "#fb7185" : "#60a5fa",
+              border: `1px solid ${isArgonActive ? "rgba(225,29,72,0.3)" : "rgba(37,99,235,0.3)"}`
+            }}
+          >
+            {isArgonActive ? t("stop") : t("argonStartServing")}
           </button>
         </div>
 

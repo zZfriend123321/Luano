@@ -89,6 +89,11 @@ interface Window {
     rojoStop: () => Promise<{ success: boolean }>
     rojoGetStatus: () => Promise<string>
 
+    // Argon
+    argonServe: (projectPath: string) => Promise<{ success: boolean }>
+    argonStop: () => Promise<{ success: boolean }>
+    argonGetStatus: () => Promise<string>
+
     // Lint
     formatFile: (path: string) => Promise<{ success: boolean }>
     lintFile: (path: string) => Promise<unknown>

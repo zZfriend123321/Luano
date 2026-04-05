@@ -3,7 +3,7 @@ import { join } from "path"
 import { copyFileSync, mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync } from "fs"
 import { is } from "@electron-toolkit/utils"
 import * as pty from "node-pty"
-import { rojoManager, lspManager } from "../main"
+import { rojoManager, argonManager, lspManager } from "../main"
 import { readDir, readFile, writeFile, createFile, createFolder, renameEntry, deleteEntry, moveEntry, initProject } from "../file/project"
 import { watchProject } from "../file/watcher"
 import { lintFile } from "../sidecar/selene"
@@ -292,6 +292,17 @@ export function registerIpcHandlers(): void {
     return { success: true }
   })
   ipcMain.handle("rojo:status", () => rojoManager.getStatus())
+
+  // ── Argon ──────────────────────────────────────────────────────────────────
+  ipcMain.handle("argon:serve", (_, projectPath: string) => {
+    argonManager.serve(projectPath)
+    return { success: true }
+  })
+  ipcMain.handle("argon:stop", () => {
+    argonManager.stop()
+    return { success: true }
+  })
+  ipcMain.handle("argon:status", () => argonManager.getStatus())
 
   // ── Lint/Format ─────────────────────────────────────────────────────────────
   ipcMain.handle("lint:format", async (_, filePath: string) => {
