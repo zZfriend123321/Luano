@@ -29,6 +29,9 @@ export class ArgonManager {
 
     try {
       const handleOutput = (data: string): void => {
+        const trimmed = data.trim()
+        console.log("[Argon stdout]", trimmed)
+        if (trimmed) this.notifyLog(trimmed, "output")
         // Parse port from Argon output (e.g. "Argon is listening on 0.0.0.0:8000")
         const portMatch = data.match(/listening on.*:(\d{4,5})/i)
         if (portMatch) {
@@ -41,12 +44,19 @@ export class ArgonManager {
 
       const handleError = (data: string): void => {
         // Argon (Rust CLI) writes status/log output to stderr via the tracing crate
+        const trimmed = data.trim()
+        console.error("[Argon stderr]", trimmed)
+
+        // Determine log kind based on content
+        const lower = trimmed.toLowerCase()
+        const isError = lower.includes("error") || lower.includes("failed") || lower.includes("panicked")
+        if (trimmed) this.notifyLog(trimmed, isError ? "error" : "warn")
+
         // Forward to output handler to detect port
         handleOutput(data)
 
         // Detect error conditions from tracing output
-        const lower = data.toLowerCase()
-        if (lower.includes("error") || lower.includes("failed") || lower.includes("panicked")) {
+        if (isError) {
           if (this.status === "starting") {
             this.status = "error"
             this.notifyStatus()
@@ -63,6 +73,10 @@ export class ArgonManager {
       this.proc = sidecar.process
 
       this.proc.on("exit", (code) => {
+        console.log(`[Argon] Process exited with code ${code}`)
+        if (code !== 0 && code !== null) {
+          this.notifyLog(`Argon exited with code ${code}`, "error")
+        }
         if (this.proc === null) return
         this.status = code === 0 ? "stopped" : "error"
         this.notifyStatus()
@@ -72,11 +86,15 @@ export class ArgonManager {
         }
       })
 
-      this.proc.on("error", () => {
+      this.proc.on("error", (err) => {
+        console.error("[Argon] Failed to start process:", err.message)
+        this.notifyLog(`Failed to start Argon: ${err.message}`, "error")
         this.status = "error"
         this.notifyStatus()
       })
-    } catch {
+    } catch (err) {
+      console.error("[Argon] Exception during serve:", err)
+      this.notifyLog(`Argon exception: ${err instanceof Error ? err.message : String(err)}`, "error")
       this.status = "error"
       this.notifyStatus()
     }
@@ -104,6 +122,13 @@ export class ArgonManager {
   private notifyStatus(): void {
     BrowserWindow.getAllWindows().forEach((win) => {
       win.webContents.send("argon:status-changed", this.status, this.port)
+    })
+  }
+
+  private notifyLog(text: string, kind: "output" | "warn" | "error"): void {
+    const entry = { text, kind, ts: Date.now() }
+    BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send("argon:log", entry)
     })
   }
 

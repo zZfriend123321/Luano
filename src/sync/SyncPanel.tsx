@@ -251,6 +251,15 @@ export function SyncPanel(): JSX.Element {
     return cleanup
   }, [])
 
+  // ── Argon log push ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const cleanup = window.api.on("argon:log", (data: unknown) => {
+      const entry = data as BridgeLogEntry
+      if (entry?.text) setStudioLogs(prev => [...prev, entry].slice(-1000))
+    })
+    return cleanup
+  }, [])
+
   // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (tab === "console" && consoleScrollRef.current) consoleScrollRef.current.scrollTop = consoleScrollRef.current.scrollHeight
