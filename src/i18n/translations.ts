@@ -3,6 +3,7 @@ export const translations = {
     // Sidebar
     files: "Files",
     rojo: "Rojo",
+    argon: "Argon",
     studio: "Studio",
     sync: "Sync",
     graph: "Graph",
@@ -188,6 +189,7 @@ export const translations = {
   ko: {
     files: "파일",
     rojo: "Rojo",
+    argon: "Argon",
     studio: "Studio",
     sync: "동기화",
     graph: "그래프",

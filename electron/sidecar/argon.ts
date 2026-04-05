@@ -33,7 +33,7 @@ export class ArgonManager {
         onData: (data) => {
           this.restartCount = 0
           // Parse port from Argon output (e.g. "Argon is listening on 0.0.0.0:8000")
-          const portMatch = data.match(/(?:port|localhost:|:)(\d{4,5})/i)
+          const portMatch = data.match(/listening on.*:(\d{4,5})/i)
           if (portMatch) this.port = parseInt(portMatch[1], 10)
           if (this.status !== "running") {
             this.status = "running"

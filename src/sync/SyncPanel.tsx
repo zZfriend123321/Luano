@@ -15,14 +15,7 @@ type SyncTab = "console" | "tree"
 
 // ── Rojo status config ────────────────────────────────────────────────────────
 
-const rojoStatusCfg: Record<string, { color: string; glow: boolean }> = {
-  stopped:  { color: "#3a5272", glow: false },
-  starting: { color: "#f59e0b", glow: false },
-  running:  { color: "#10b981", glow: true },
-  error:    { color: "#e11d48", glow: false }
-}
-
-const argonStatusCfg: Record<string, { color: string; glow: boolean }> = {
+const syncStatusCfg: Record<string, { color: string; glow: boolean }> = {
   stopped:  { color: "#3a5272", glow: false },
   starting: { color: "#f59e0b", glow: false },
   running:  { color: "#10b981", glow: true },
@@ -229,10 +222,10 @@ export function SyncPanel(): JSX.Element {
 
   const consoleScrollRef = useRef<HTMLDivElement>(null)
 
-  const rcfg = rojoStatusCfg[rojoStatus] ?? rojoStatusCfg.stopped
+  const rcfg = syncStatusCfg[rojoStatus] ?? syncStatusCfg.stopped
   const isRojoActive = rojoStatus === "running" || rojoStatus === "starting"
 
-  const acfg = argonStatusCfg[argonStatus] ?? argonStatusCfg.stopped
+  const acfg = syncStatusCfg[argonStatus] ?? syncStatusCfg.stopped
   const isArgonActive = argonStatus === "running" || argonStatus === "starting"
 
   // ── Studio initial fetch ──────────────────────────────────────────────────
@@ -358,7 +351,7 @@ export function SyncPanel(): JSX.Element {
             }}
           />
           <span style={{ fontSize: "11px", color: "var(--text-secondary)", flex: 1 }}>
-            Argon
+            {t("argon")}
             {argonStatus === "running" && argonPort && (
               <span style={{ color: "var(--text-muted)", marginLeft: "4px" }}>:{argonPort}</span>
             )}
