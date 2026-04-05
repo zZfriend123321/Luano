@@ -34,18 +34,30 @@ export class ArgonManager {
         if (portMatch) {
           this.port = parseInt(portMatch[1], 10)
           this.restartCount = 0
-        }
-        if (this.status !== "running") {
           this.status = "running"
+          this.notifyStatus()
         }
-        this.notifyStatus()
       }
 
-      const sidecar = spawnSidecar("argon", ["serve", "--host", "0.0.0.0"], {
+      const handleError = (data: string): void => {
+        // Argon (Rust CLI) writes status/log output to stderr via the tracing crate
+        // Forward to output handler to detect port
+        handleOutput(data)
+
+        // Detect error conditions from tracing output
+        const lower = data.toLowerCase()
+        if (lower.includes("error") || lower.includes("failed") || lower.includes("panicked")) {
+          if (this.status === "starting") {
+            this.status = "error"
+            this.notifyStatus()
+          }
+        }
+      }
+
+      const sidecar = spawnSidecar("argon", ["serve", "default.project.json", "--host", "0.0.0.0"], {
         cwd: projectPath,
         onData: handleOutput,
-        // Argon (Rust CLI) writes status/log output to stderr via the tracing crate
-        onError: handleOutput
+        onError: handleError
       })
 
       this.proc = sidecar.process

@@ -1,16 +1,11 @@
 /**
  * electron/pro/index.ts — Pro feature interface layer
  *
- * Attempts to load @luano/pro package. If present and licensed, Pro features
- * are available. Otherwise, the app runs in Community (free) mode.
- *
- * Community mode includes: editor, LSP, Rojo/Selene/StyLua, basic AI chat (BYOK Q&A).
- * Pro mode adds: Agent loop, inline edit, RAG, Studio bridge, cross-script analysis,
- * performance lint, DataStore schema generator, skills system.
+ * All features are unlocked during the testing period.
+ * No paywall or subscription checks are enforced.
  */
 
 import type { ChatMessage, AgentChatResult } from "../ai/provider"
-import { hasValidLicense } from "./license"
 
 export interface LuanoProModule {
   validateLicense(): boolean
@@ -30,11 +25,8 @@ try {
 }
 
 export function isPro(): boolean {
-  // Dev override: LUANO_PRO=1 in env enables Pro features locally
-  if (process.env.LUANO_PRO === "1") return true
-  // LemonSqueezy license key
-  if (hasValidLicense()) return true
-  return pro !== null && pro.validateLicense()
+  // All features unlocked during testing period
+  return true
 }
 
 export function getProModule(): LuanoProModule | null {
@@ -43,10 +35,9 @@ export function getProModule(): LuanoProModule | null {
 }
 
 /** Feature gate — returns true if the feature should be available */
-export function hasFeature(feature: ProFeature): boolean {
-  // All features require Pro except basic ones
-  if (FREE_FEATURES.has(feature)) return true
-  return isPro()
+export function hasFeature(_feature: ProFeature): boolean {
+  // All features unlocked during testing period
+  return true
 }
 
 export type ProFeature =
@@ -67,24 +58,3 @@ export type ProFeature =
   | "perf-lint"
   | "datastore-schema"
   | "skills"
-
-// All features are free during the testing period — subscription is disabled
-const FREE_FEATURES = new Set<ProFeature>([
-  "editor",
-  "lsp",
-  "rojo",
-  "selene",
-  "stylua",
-  "terminal",
-  "explorer",
-  "templates",
-  "basic-chat",
-  "agent",
-  "inline-edit",
-  "rag",
-  "studio-bridge",
-  "cross-script",
-  "perf-lint",
-  "datastore-schema",
-  "skills"
-])
