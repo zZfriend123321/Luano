@@ -3,6 +3,7 @@ import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import { registerIpcHandlers } from "./ipc/handlers"
 import { RojoManager } from "./sidecar/rojo"
+import { ArgonManager } from "./sidecar/argon"
 import { LspManager } from "./lsp/manager"
 import { startBridgeServer, setBridgeWindow } from "./pro/modules"
 import { setupUpdater } from "./updater"
@@ -10,6 +11,7 @@ import { setupUpdater } from "./updater"
 let mainWindow: BrowserWindow | null = null
 
 export const rojoManager = new RojoManager()
+export const argonManager = new ArgonManager()
 export const lspManager = new LspManager()
 
 function createWindow(): void {
@@ -103,6 +105,7 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", async () => {
   rojoManager.stop()
+  argonManager.stop()
   await lspManager.stop()
   if (process.platform !== "darwin") app.quit()
 })

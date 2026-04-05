@@ -3,6 +3,7 @@
 
 import { useT } from "../i18n/useT"
 import { useRojoStore } from "../stores/rojoStore"
+import { useArgonStore } from "../stores/argonStore"
 
 export type SidePanel = "explorer" | "search" | "sync" | "analysis" | "datastore"
 
@@ -75,6 +76,9 @@ export function Sidebar({ activePanel, onSelect }: SidebarProps): JSX.Element {
   const t = useT()
   const rojoStatus = useRojoStore((s) => s.status)
   const rojoActive = rojoStatus === "running" || rojoStatus === "starting"
+  const argonStatus = useArgonStore((s) => s.status)
+  const argonActive = argonStatus === "running" || argonStatus === "starting"
+  const syncActive = rojoActive || argonActive
 
   const labels: Record<SidePanel, string> = {
     explorer: t("files"),
@@ -124,8 +128,8 @@ export function Sidebar({ activePanel, onSelect }: SidebarProps): JSX.Element {
               />
             )}
             <Icon />
-            {/* Rojo active indicator on sync icon */}
-            {panel === "sync" && rojoActive && (
+            {/* Sync active indicator on sync icon */}
+            {panel === "sync" && syncActive && (
               <span
                 className="absolute top-1 right-1 w-2 h-2 rounded-full"
                 style={{

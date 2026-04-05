@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useProjectStore } from "./stores/projectStore"
 import { useRojoStore } from "./stores/rojoStore"
+import { useArgonStore } from "./stores/argonStore"
 import { useAIStore } from "./stores/aiStore"
 import { useSettingsStore } from "./stores/settingsStore"
 import { useIpcEvent } from "./hooks/useIpc"
@@ -146,6 +147,7 @@ function WelcomeScreen({
 export default function App(): JSX.Element {
   const { projectPath, dirtyFiles, setProject, closeProject, setFileTree, openFile } = useProjectStore()
   const { setStatus, setPort } = useRojoStore()
+  const { setStatus: setArgonStatus, setPort: setArgonPort } = useArgonStore()
   const { setGlobalSummary, clearMessages, saveProjectChat, loadProjectChat } = useAIStore()
   const theme = useSettingsStore((s) => s.theme)
   const uiScale = useSettingsStore((s) => s.uiScale)
@@ -229,6 +231,10 @@ export default function App(): JSX.Element {
     setStatus(args[0] as "stopped" | "starting" | "running" | "error")
     if (typeof args[1] === "number") setPort(args[1])
   }, [setStatus, setPort]))
+  useIpcEvent("argon:status-changed", useCallback((...args: unknown[]) => {
+    setArgonStatus(args[0] as "stopped" | "starting" | "running" | "error")
+    if (typeof args[1] === "number") setArgonPort(args[1])
+  }, [setArgonStatus, setArgonPort]))
   useIpcEvent("file:added", () => refreshFileTree())
   useIpcEvent("file:deleted", () => refreshFileTree())
 

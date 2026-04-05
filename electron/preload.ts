@@ -41,6 +41,11 @@ const api = {
   rojoStop: () => ipcRenderer.invoke("rojo:stop"),
   rojoGetStatus: () => ipcRenderer.invoke("rojo:status"),
 
+  // ── Argon ──────────────────────────────────────────────────────────────────
+  argonServe: (projectPath: string) => ipcRenderer.invoke("argon:serve", projectPath),
+  argonStop: () => ipcRenderer.invoke("argon:stop"),
+  argonGetStatus: () => ipcRenderer.invoke("argon:status"),
+
   // ── Lint ──────────────────────────────────────────────────────────────────
   formatFile: (path: string) => ipcRenderer.invoke("lint:format", path),
   lintFile: (path: string) => ipcRenderer.invoke("lint:check", path),
