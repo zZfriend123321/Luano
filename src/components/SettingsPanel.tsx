@@ -261,11 +261,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
   const [customSkills, setCustomSkills] = useState<CustomSkill[]>([])
   const [editingSkill, setEditingSkill] = useState<{ index: number; skill: CustomSkill } | null>(null)
   const [telemetryEnabled, setTelemetryEnabled] = useState(false)
-  const [proStatus, setProStatus] = useState<{ isPro: boolean } | null>(null)
-  const [licenseInfo, setLicenseInfo] = useState<{ isActive: boolean; customerName?: string; customerEmail?: string } | null>(null)
-  const [licenseKeyInput, setLicenseKeyInput] = useState("")
-  const [licenseActivating, setLicenseActivating] = useState(false)
-  const [licenseError, setLicenseError] = useState("")
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true))
@@ -283,10 +278,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
       }).catch(() => {})
     }
 
-    // Load telemetry and pro status
+    // Load telemetry status
     window.api.telemetryIsEnabled().then((v: boolean) => setTelemetryEnabled(v)).catch(() => {})
-    window.api.getProStatus().then((s: { isPro: boolean }) => setProStatus(s)).catch(() => {})
-    window.api.licenseInfo().then(setLicenseInfo).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps -- init once on mount
   }, [])
 
@@ -698,96 +691,20 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): JSX.Element {
           {/* Divider */}
           <div style={{ height: "1px", background: "var(--border-subtle)" }} />
 
-          {/* Pro Status + License */}
+          {/* Plan — all features free during testing */}
           <div className="flex flex-col gap-2.5">
             <SectionLabel>{t("planTier")}</SectionLabel>
             <div
               className="flex items-center gap-2 rounded-lg px-3 py-2.5"
               style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
             >
-              <span style={{ fontSize: "12px", fontWeight: 600, color: proStatus?.isPro ? "#10b981" : "var(--text-secondary)" }}>
-                {proStatus?.isPro ? t("pro") : t("communityFree")}
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#10b981" }}>
+                All Features Unlocked
               </span>
-              {licenseInfo?.isActive && licenseInfo.customerEmail && (
-                <span style={{ fontSize: "10px", color: "var(--text-muted)", marginLeft: "auto" }}>
-                  {licenseInfo.customerEmail}
-                </span>
-              )}
             </div>
-
-            {licenseInfo?.isActive ? (
-              <button
-                onClick={async () => {
-                  const result = await window.api.licenseDeactivate()
-                  if (result.success) {
-                    setLicenseInfo({ isActive: false })
-                    setProStatus({ isPro: false })
-                  }
-                }}
-                className="px-3 py-1.5 rounded-lg text-xs transition-all duration-150"
-                style={{
-                  background: "var(--bg-elevated)",
-                  color: "#f87171",
-                  border: "1px solid rgba(248,113,113,0.3)",
-                  alignSelf: "flex-start"
-                }}
-              >
-                {t("deactivateLicense")}
-              </button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={licenseKeyInput}
-                    onChange={(e) => { setLicenseKeyInput(e.target.value); setLicenseError("") }}
-                    placeholder={t("enterLicenseKey")}
-                    className="flex-1 rounded-lg px-3 py-2 transition-all duration-150 focus:outline-none"
-                    style={{
-                      background: "var(--bg-base)",
-                      border: `1px solid ${licenseError ? "rgba(248,113,113,0.5)" : "var(--border)"}`,
-                      color: "var(--text-primary)",
-                      fontSize: "12px"
-                    }}
-                    onFocus={e => (e.currentTarget).style.borderColor = "var(--accent)"}
-                    onBlur={e => (e.currentTarget).style.borderColor = licenseError ? "rgba(248,113,113,0.5)" : "var(--border)"}
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!licenseKeyInput.trim()) return
-                      setLicenseActivating(true)
-                      setLicenseError("")
-                      const result = await window.api.licenseActivate(licenseKeyInput.trim())
-                      setLicenseActivating(false)
-                      if (result.success) {
-                        setLicenseKeyInput("")
-                        setLicenseInfo({ isActive: true, customerName: result.customerName, customerEmail: result.customerEmail })
-                        setProStatus({ isPro: true })
-                      } else {
-                        setLicenseError(result.error ?? "Activation failed")
-                      }
-                    }}
-                    disabled={licenseActivating || !licenseKeyInput.trim()}
-                    className="px-3 py-2 rounded-lg font-medium transition-all duration-150 disabled:opacity-50"
-                    style={{ background: "var(--accent)", color: "white", fontSize: "12px", whiteSpace: "nowrap" }}
-                  >
-                    {licenseActivating ? "..." : t("activate")}
-                  </button>
-                </div>
-                {licenseError && (
-                  <span style={{ fontSize: "10px", color: "#f87171" }}>{licenseError}</span>
-                )}
-                <span style={{ fontSize: "10px", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                  {t("getLicenseAt")}{" "}
-                  <a
-                    href="https://luano.dev"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ color: "var(--accent)", textDecoration: "underline", cursor: "pointer" }}
-                  >luano.dev</a>
-                </span>
-              </div>
-            )}
+            <span style={{ fontSize: "10px", color: "var(--text-muted)", lineHeight: 1.4 }}>
+              All features are free during the testing period.
+            </span>
           </div>
         </div>
 

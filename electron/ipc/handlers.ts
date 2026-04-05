@@ -608,45 +608,37 @@ export function registerIpcHandlers(): void {
     return { success: true }
   })
 
-  // ── Cross-Script Analysis [Pro] ─────────────────────────────────────────────
+  // ── Cross-Script Analysis ─────────────────────────────────────────────
   ipcMain.handle("analysis:cross-script", (_, projectPath: string) => {
-    if (!hasFeature("cross-script")) return PRO_REQUIRED("cross-script")
     return analyzeCrossScript(projectPath)
   })
 
   ipcMain.handle("analysis:perf-lint", (_, projectPath: string) => {
-    if (!hasFeature("perf-lint")) return PRO_REQUIRED("perf-lint")
     return performanceLint(projectPath)
   })
 
   ipcMain.handle("analysis:perf-lint-file", (_, filePath: string, content: string) => {
-    if (!hasFeature("perf-lint")) return PRO_REQUIRED("perf-lint")
     return performanceLintFile(filePath, content)
   })
 
-  // ── DataStore Schema [Pro] ────────────────────────────────────────────────
+  // ── DataStore Schema ────────────────────────────────────────────────
   ipcMain.handle("datastore:load-schemas", (_, projectPath: string) => {
-    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return loadSchemas(projectPath)
   })
 
   ipcMain.handle("datastore:save-schema", (_, projectPath: string, schema: DataStoreSchema) => {
-    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return addSchema(projectPath, schema)
   })
 
   ipcMain.handle("datastore:delete-schema", (_, projectPath: string, name: string) => {
-    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return deleteSchema(projectPath, name)
   })
 
   ipcMain.handle("datastore:generate-code", (_, schema: DataStoreSchema) => {
-    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return generateDataModule(schema)
   })
 
   ipcMain.handle("datastore:generate-migration", (_, oldSchema: DataStoreSchema, newSchema: DataStoreSchema) => {
-    if (!hasFeature("datastore-schema")) return PRO_REQUIRED("datastore-schema")
     return generateMigration(oldSchema, newSchema)
   })
 

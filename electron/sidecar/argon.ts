@@ -28,19 +28,22 @@ export class ArgonManager {
     this.notifyStatus()
 
     try {
+      const handleOutput = (data: string): void => {
+        this.restartCount = 0
+        // Parse port from Argon output (e.g. "Argon is listening on 0.0.0.0:8000")
+        const portMatch = data.match(/listening on.*:(\d{4,5})/i)
+        if (portMatch) this.port = parseInt(portMatch[1], 10)
+        if (this.status !== "running") {
+          this.status = "running"
+        }
+        this.notifyStatus()
+      }
+
       const sidecar = spawnSidecar("argon", ["serve", "--host", "0.0.0.0"], {
         cwd: projectPath,
-        onData: (data) => {
-          this.restartCount = 0
-          // Parse port from Argon output (e.g. "Argon is listening on 0.0.0.0:8000")
-          const portMatch = data.match(/listening on.*:(\d{4,5})/i)
-          if (portMatch) this.port = parseInt(portMatch[1], 10)
-          if (this.status !== "running") {
-            this.status = "running"
-          }
-          this.notifyStatus()
-        },
-        onError: () => {}
+        onData: handleOutput,
+        // Argon (Rust CLI) writes status/log output to stderr via the tracing crate
+        onError: handleOutput
       })
 
       this.proc = sidecar.process

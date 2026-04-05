@@ -68,6 +68,7 @@ export type ProFeature =
   | "datastore-schema"
   | "skills"
 
+// All features are free during the testing period — subscription is disabled
 const FREE_FEATURES = new Set<ProFeature>([
   "editor",
   "lsp",
@@ -77,5 +78,13 @@ const FREE_FEATURES = new Set<ProFeature>([
   "terminal",
   "explorer",
   "templates",
-  "basic-chat"
+  "basic-chat",
+  "agent",
+  "inline-edit",
+  "rag",
+  "studio-bridge",
+  "cross-script",
+  "perf-lint",
+  "datastore-schema",
+  "skills"
 ])
