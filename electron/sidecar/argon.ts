@@ -29,6 +29,7 @@ export class ArgonManager {
 
     try {
       const handleOutput = (data: string): void => {
+        console.log("[Argon stdout]", data.trim())
         // Parse port from Argon output (e.g. "Argon is listening on 0.0.0.0:8000")
         const portMatch = data.match(/listening on.*:(\d{4,5})/i)
         if (portMatch) {
@@ -41,6 +42,8 @@ export class ArgonManager {
 
       const handleError = (data: string): void => {
         // Argon (Rust CLI) writes status/log output to stderr via the tracing crate
+        console.error("[Argon stderr]", data.trim())
+
         // Forward to output handler to detect port
         handleOutput(data)
 
@@ -63,6 +66,7 @@ export class ArgonManager {
       this.proc = sidecar.process
 
       this.proc.on("exit", (code) => {
+        console.log(`[Argon] Process exited with code ${code}`)
         if (this.proc === null) return
         this.status = code === 0 ? "stopped" : "error"
         this.notifyStatus()
@@ -72,11 +76,13 @@ export class ArgonManager {
         }
       })
 
-      this.proc.on("error", () => {
+      this.proc.on("error", (err) => {
+        console.error("[Argon] Failed to start process:", err.message)
         this.status = "error"
         this.notifyStatus()
       })
-    } catch {
+    } catch (err) {
+      console.error("[Argon] Exception during serve:", err)
       this.status = "error"
       this.notifyStatus()
     }
