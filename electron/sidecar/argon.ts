@@ -32,8 +32,8 @@ export class ArgonManager {
         const trimmed = data.trim()
         console.log("[Argon stdout]", trimmed)
         if (trimmed) this.notifyLog(trimmed, "output")
-        // Parse port from Argon output (e.g. "Argon is listening on 0.0.0.0:8000")
-        const portMatch = data.match(/listening on.*:(\d{4,5})/i)
+        // Parse port from Argon output (e.g. "Argon is listening on 0.0.0.0:8000" or "INFO: Serving on: http://0.0.0.0:8000")
+        const portMatch = data.match(/(?:listening on|serving on).*?:(\d{4,5})/i)
         if (portMatch) {
           this.port = parseInt(portMatch[1], 10)
           this.restartCount = 0
